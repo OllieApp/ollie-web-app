@@ -1,0 +1,12 @@
+.side-bar {
+    width: 150px;
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+    height: 100%;
+    z-index: 111;
+    top: 0;
+    bottom: 0;
+    left: 0;
+}

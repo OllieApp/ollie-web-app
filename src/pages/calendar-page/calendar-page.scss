@@ -1,0 +1,109 @@
+@import "../../variables.scss";
+
+.calendar-page-container {
+    padding-top: 40px;
+    align-items: center;
+    justify-content: center;
+    min-height: 500px;
+    height: 100vh;
+
+    .fc-prev-button {
+        border-radius: 15px 0px 0px 15px;
+    }
+
+    .fc-timeGridWeek-button,
+    .fc-dayGridMonth-button,
+    .fc-timeGridDay-button,
+    .fc-today-button,
+    .fc-next-button,
+    .fc-prev-button {
+        background-color: $gray94;
+        border-color: $gray94;
+        box-shadow: none;
+        color: #000;
+
+        &:hover,
+        &:focus {
+            background-color: $darkerGray;
+            border-color: $darkerGray;
+        }
+
+        &:disabled {
+            background-color: $darkerGray;
+            border-color: $darkerGray;
+
+        }
+
+    }
+
+    .fc-next-button {
+        border-radius: 0px 15px 15px 0px;
+    }
+
+    & .fc-button-primary:not(:disabled):active,
+    & .fc-button-primary:not(:disabled).fc-button-active {
+        background-color: $darkerGray;
+        border-color: $darkerGray;
+
+    }
+
+    .fc-icon {
+        color: #000;
+    }
+}
+
+.calendar-view {
+    background-color: white;
+}
+
+.create-event-dialog-container {
+    padding: 20px 30px 20px 20px !important;
+}
+
+.create-event-dialog {
+    border-radius: 30px;
+}
+
+div ::-webkit-scrollbar {
+    width: 11px;
+}
+
+div::-webkit-scrollbar-thumb {
+    background-color: $darkerGray;
+    border-radius: 6px;
+}
+
+.calendar-day-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-day-number {
+    font-size: 35px;
+    font-weight: bold;
+    border-radius: 100px;
+    width: 52px;
+    height: 52px;
+
+    /* Media Query for Mobile Devices */
+    @media (max-width: 480px) {
+        font-size: 20px;
+        width: 30px;
+        height: 30px;
+    }
+
+    /* Media Query for low resolution  Tablets, Ipads */
+    @media (min-width: 481px) and (max-width: 767px) {
+        font-size: 25px;
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Media Query for Tablets Ipads portrait mode */
+    @media (min-width: 768px) and (max-width: 1024px) {
+        font-size: 30px;
+        width: 45px;
+        height: 45px;
+    }
+
+}

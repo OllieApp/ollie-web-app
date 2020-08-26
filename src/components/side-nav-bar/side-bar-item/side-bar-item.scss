@@ -1,0 +1,51 @@
+@import "../../../variables.scss";
+
+.side-bar-item {
+    display: flex;
+    flex-direction: column;
+    margin: 20px 0px;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+
+    .side-bar-icon-container {
+        padding: 16px;
+        background-color: $gray94;
+        margin-bottom: 18px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 20px;
+        width: 40px;
+        height: 40px;
+
+        .side-bar-icon {
+            display: flex;
+            width: 28px;
+            height: 28px;
+        }
+    }
+
+    .side-bar-text {
+        overflow: hidden;
+        font-size: 14px;
+        letter-spacing: 0px;
+        line-height: 1.2;
+        font-weight: 400;
+        font-style: normal;
+        text-align: center;
+        color: $primaryColor;
+    }
+
+    &:hover {
+        .side-bar-icon-container {
+            background-color: $darkerGray;
+        }
+    }
+
+    &.active {
+        .side-bar-icon-container {
+            background-color: $primaryColor;
+        }
+    }
+}

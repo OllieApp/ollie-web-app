@@ -1,0 +1,49 @@
+@import "../../variables.scss";
+
+.profile-page-container {
+    padding-top: 40px;
+    padding-right: 40px !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.data-container {
+    background-color: $darkestGray;
+    padding: 32px 35px;
+    border-radius: 25px;
+}
+
+.profile-header-container {
+    background-color: $darkestGray;
+    padding: 32px 35px 0px 35px;
+    border-radius: 25px 25px 0px 0px;
+}
+
+.profile-content-container {
+    background-color: white;
+    padding: 32px 35px;
+    border-radius: 0px 0px 25px 25px;
+}
+
+.name-heading {
+    color: $primaryColor;
+    margin: 0;
+}
+
+.speciality-heading {
+    color: #5E5E5E;
+    margin: 0;
+}
+
+.account-status-box {
+    border-radius: 18px;
+    padding: 10px 20px;
+    background-color: $secondaryColor;
+    color: $primaryColor;
+    height: fit-content;
+    width: fit-content;
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+}
