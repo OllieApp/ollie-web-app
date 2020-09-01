@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, createRef } from 'react';
+import React, { useState, useEffect, createRef } from 'react';
 import { RouteComponentProps } from '@reach/router';
 import Container from '@material-ui/core/Container';
 import FullCalendar, { EventClickArg } from '@fullcalendar/react';
@@ -17,6 +17,7 @@ import {
     FormControlLabel,
     Switch,
     FormLabel,
+    Menu,
     MenuItem,
     FormControl,
     Select,
@@ -24,18 +25,15 @@ import {
     Radio,
     InputAdornment,
     ButtonGroup,
-    Popover,
-    Typography,
-    Menu,
 } from '@material-ui/core';
-import { Plus, Edit } from 'react-feather';
+import { Plus } from 'react-feather';
 import { KeyboardTimePicker, KeyboardDatePicker } from '@material-ui/pickers';
 import moment from 'moment';
-import { useStyles } from '../../common/theming/theming';
 import interactionPlugin from '@fullcalendar/interaction'; // needed for dayClick
 import rrulePlugin from '@fullcalendar/rrule';
 import { RRule, Frequency } from 'rrule';
 import { CirclePicker } from 'react-color';
+import { useStyles } from '../../common/theming/theming';
 
 interface DoctorCalendarEvent {
     type: 'consultation' | 'video';
@@ -64,6 +62,7 @@ interface CalendarEvent {
     backgroundColor?: string;
     borderColor?: string;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function CalendarPage(props: RouteComponentProps) {
     const calendarRef = createRef<FullCalendar>();
     const classes = useStyles();
@@ -73,13 +72,17 @@ export function CalendarPage(props: RouteComponentProps) {
     const handleClick = (event: EventClickArg) => {
         const startDate = moment(event.event.start);
         startDate.subtract({ minutes: 30 });
-        calendarRef.current?.getApi().scrollToTime({
-            hour: startDate.hour(),
-            minute: startDate.minute(),
-            day: startDate.day(),
-            month: startDate.month(),
-            year: startDate.year(),
-        });
+
+        if (calendarRef.current) {
+            calendarRef.current.getApi().scrollToTime({
+                hour: startDate.hour(),
+                minute: startDate.minute(),
+                day: startDate.day(),
+                month: startDate.month(),
+                year: startDate.year(),
+            });
+        }
+
         setAnchorEl(event.el as HTMLButtonElement);
     };
 
@@ -88,7 +91,7 @@ export function CalendarPage(props: RouteComponentProps) {
     };
 
     const open = Boolean(anchorEl);
-    const id = open ? 'simple-popover' : undefined;
+    // const id = open ? 'simple-popover' : undefined;
 
     const [title, setTitle] = useState('');
     const [notes, setNotes] = useState('');
@@ -192,8 +195,9 @@ export function CalendarPage(props: RouteComponentProps) {
                 return Frequency.WEEKLY;
             case 'yearly':
                 return Frequency.YEARLY;
+            default:
+                return Frequency.DAILY;
         }
-        return Frequency.DAILY;
     }
 
     const addEventToCalendar = () => {
@@ -202,7 +206,7 @@ export function CalendarPage(props: RouteComponentProps) {
                 ...events,
                 {
                     id: '231233',
-                    title: title,
+                    title,
                     start: startDate.toISOString(),
                     end: endDate?.toISOString(),
                     allDay: isAllDay,
@@ -217,20 +221,20 @@ export function CalendarPage(props: RouteComponentProps) {
                               byweekday: [
                                   ...recurrenceEnd.weeklyRecurrence.map((i) => {
                                       switch (i) {
-                                          case 'FR':
-                                              return 4;
                                           case 'MO':
                                               return 0;
-                                          case 'SA':
-                                              return 5;
-                                          case 'SU':
-                                              return 6;
-                                          case 'TH':
-                                              return 3;
                                           case 'TU':
                                               return 1;
                                           case 'WE':
                                               return 2;
+                                          case 'TH':
+                                              return 3;
+                                          case 'FR':
+                                              return 4;
+                                          case 'SA':
+                                              return 5;
+                                          case 'SU':
+                                              return 6;
                                       }
                                   }),
                               ],
@@ -240,16 +244,18 @@ export function CalendarPage(props: RouteComponentProps) {
                     borderColor: eventColor ?? undefined,
                 },
             ]);
-        } catch (error) {}
+        } catch (error) {
+            // TODO: Report
+        }
     };
 
     const recurrenceView = isRecurringEvent && (
-        <Grid xs={6}>
-            <Box height="20px"></Box>
-            <Grid container direction="column" xs>
+        <Grid xs={6} item>
+            <Box height="20px" />
+            <Grid container direction="column" item xs>
                 <Grid container alignItems="center">
                     <p>Repeat every</p>
-                    <Box width="10px"></Box>
+                    <Box width="10px" />
                     <TextField
                         InputProps={{
                             disableUnderline: true,
@@ -271,7 +277,7 @@ export function CalendarPage(props: RouteComponentProps) {
                         id="repeat_count"
                         type="number"
                     />
-                    <Box width="10px"></Box>
+                    <Box width="10px" />
                     <FormControl>
                         <Select
                             style={{
@@ -424,7 +430,7 @@ export function CalendarPage(props: RouteComponentProps) {
                             <FormControlLabel value="on_date" control={<Radio />} label="On" />
                             <KeyboardDatePicker
                                 disabled={recurrenceEnd.type !== 'on_date'}
-                                className={'rounded-input'}
+                                className="rounded-input"
                                 disableToolbar
                                 InputProps={{
                                     disableUnderline: true,
@@ -566,12 +572,12 @@ export function CalendarPage(props: RouteComponentProps) {
                         />
                     </Grid>
                     <Grid direction="row" container>
-                        <Grid xs={6}>
-                            <Grid xs>
+                        <Grid xs={6} item>
+                            <Grid xs item>
                                 <Box height="10px" />
                                 <Grid container>
                                     <KeyboardDatePicker
-                                        className={'rounded-input'}
+                                        className="rounded-input"
                                         disableToolbar
                                         InputProps={{
                                             disableUnderline: true,
@@ -592,9 +598,9 @@ export function CalendarPage(props: RouteComponentProps) {
                                     />
                                     {!isAllDay && (
                                         <>
-                                            <Box width="20px"></Box>
+                                            <Box width="20px" />
                                             <KeyboardTimePicker
-                                                className={'rounded-input'}
+                                                className="rounded-input"
                                                 margin="dense"
                                                 InputProps={{
                                                     disableUnderline: true,
@@ -614,11 +620,11 @@ export function CalendarPage(props: RouteComponentProps) {
                                     )}
                                 </Grid>
                             </Grid>
-                            <Grid xs>
+                            <Grid xs item>
                                 <Box height="10px" />
                                 <Grid container>
                                     <KeyboardDatePicker
-                                        className={'rounded-input'}
+                                        className="rounded-input"
                                         disableToolbar
                                         InputProps={{
                                             disableUnderline: true,
@@ -639,9 +645,9 @@ export function CalendarPage(props: RouteComponentProps) {
                                     />
                                     {!isAllDay && (
                                         <>
-                                            <Box width="20px"></Box>
+                                            <Box width="20px" />
                                             <KeyboardTimePicker
-                                                className={'rounded-input'}
+                                                className="rounded-input"
                                                 margin="dense"
                                                 InputProps={{
                                                     disableUnderline: true,
@@ -720,11 +726,10 @@ export function CalendarPage(props: RouteComponentProps) {
                     const date = new Date(bDateString);
                     bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
                 }
-            } catch (error) {}
-            console.log(aDateString);
-            console.log(bDateString);
-            console.log(a);
-            console.log(b);
+            } catch (error) {
+                // TODO: Report
+            }
+
             const compareRes = aDateString.localeCompare(bDateString, 'en');
             switch (compareRes) {
                 case 1:
@@ -751,7 +756,9 @@ export function CalendarPage(props: RouteComponentProps) {
                     const date = new Date(b);
                     bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
                 }
-            } catch (error) {}
+            } catch (error) {
+                // TODO: Report
+            }
             const compareRes = aDateString.localeCompare(bDateString, 'en');
             switch (compareRes) {
                 case 1:
@@ -762,8 +769,7 @@ export function CalendarPage(props: RouteComponentProps) {
                     return aDateString;
             }
         });
-    console.log(slotMaxTime + 'max');
-    console.log(slotMinTime + 'min');
+
     return (
         <>
             <Menu id="simple-menu" anchorEl={anchorEl} keepMounted open={Boolean(anchorEl)} onClose={handleClose}>
@@ -787,7 +793,6 @@ export function CalendarPage(props: RouteComponentProps) {
                 <Box marginTop="20px">
                     <FullCalendar
                         ref={calendarRef}
-                        selectable={true}
                         headerToolbar={{
                             left: 'prev,next today',
                             center: 'title',
@@ -809,9 +814,9 @@ export function CalendarPage(props: RouteComponentProps) {
                             const date = moment(args.date);
                             if (args.view.type !== 'timeGridWeek') return undefined;
                             return (
-                                <div className={'calendar-day-container'}>
+                                <div className="calendar-day-container">
                                     <div
-                                        className={'calendar-day-number'}
+                                        className="calendar-day-number"
                                         style={{
                                             color: args.isToday ? 'white' : '#2D6455',
                                             backgroundColor: args.isToday ? '#2D6455' : 'transparent',
@@ -830,19 +835,11 @@ export function CalendarPage(props: RouteComponentProps) {
                             setCreateEventOpen(true);
                         }}
                         eventContent={(args) => {
-                            const startDate = args.event.start;
-                            const endDate = args.event.end;
-                            const padTime = (value: number | undefined) => (value ?? '').toString().padStart(2, '0');
+                            // const startDate = args.event.start;
+                            // const endDate = args.event.end;
+                            // const padTime = (value: number | undefined) => (value ?? '').toString().padStart(2, '0');
                             if (args.event.allDay) return undefined;
                             return undefined;
-                            return (
-                                <div>
-                                    <p style={{ fontWeight: 'bold' }}>{args.event.title}</p>
-                                    <p>{`${padTime(startDate?.getHours())}:${padTime(
-                                        startDate?.getMinutes(),
-                                    )} - ${padTime(endDate?.getHours())}:${padTime(startDate?.getMinutes())}`}</p>
-                                </div>
-                            );
                         }}
                         eventTimeFormat={{
                             hour: 'numeric',
@@ -860,18 +857,19 @@ export function CalendarPage(props: RouteComponentProps) {
                             }
                             if (
                                 selectInfo.allDay &&
-                                selectInfo.start.getFullYear() == currentDate.getFullYear() &&
-                                selectInfo.start.getDay() == currentDate.getDay() &&
-                                selectInfo.start.getMonth() == currentDate.getMonth()
+                                selectInfo.start.getFullYear() === currentDate.getFullYear() &&
+                                selectInfo.start.getDay() === currentDate.getDay() &&
+                                selectInfo.start.getMonth() === currentDate.getMonth()
                             ) {
                                 return true;
                             }
                             return false;
                         }}
-                        weekNumbers
                         slotMinTime={slotMinTime}
                         slotMaxTime={slotMaxTime}
                         eventConstraint={businessHours}
+                        weekNumbers
+                        selectable
                     />
                 </Box>
             </Container>

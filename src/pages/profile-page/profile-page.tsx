@@ -5,7 +5,6 @@ import {
     Grid,
     Box,
     Button,
-    Paper,
     Avatar,
     Tab,
     Tabs,
@@ -20,14 +19,16 @@ import {
     Typography,
     AccordionDetails,
 } from '@material-ui/core';
+import { ChevronDown } from 'react-feather';
 import { useStyles } from '../../common/theming/theming';
 import './profile-page.scss';
-import { ArrowDown, ChevronDown } from 'react-feather';
+
 enum DoctorSpeciality {
     GP = 1,
     Physiotherapist,
     Psychologist,
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProfilePage(props: RouteComponentProps) {
     const classes = useStyles();
     const [tabIndex, setTabIndex] = useState(0);
@@ -39,7 +40,7 @@ export function ProfilePage(props: RouteComponentProps) {
     const [address, setAddress] = useState('');
     const [appointmentSlot, setAppointmentSlot] = useState(15);
 
-    const doctorInfoView = tabIndex == 0 && (
+    const doctorInfoView = tabIndex === 0 && (
         <>
             <Grid direction="row" container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
@@ -237,7 +238,7 @@ export function ProfilePage(props: RouteComponentProps) {
             </Grid>
         </>
     );
-    const settings = tabIndex == 1 && (
+    const settings = tabIndex === 1 && (
         <>
             <Grid direction="row" container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
@@ -265,7 +266,7 @@ export function ProfilePage(props: RouteComponentProps) {
                         }}
                         disableUnderline
                         value={appointmentSlot}
-                        onChange={(event) => setAppointmentSlot(Number.parseInt(event.target.value as string))}
+                        onChange={(event) => setAppointmentSlot(Number(event.target.value))}
                         variant="filled"
                         displayEmpty
                         fullWidth
@@ -466,7 +467,7 @@ export function ProfilePage(props: RouteComponentProps) {
         </>
     );
 
-    const faq = tabIndex == 2 && (
+    const faq = tabIndex === 2 && (
         <>
             <Accordion elevation={0}>
                 <AccordionSummary expandIcon={<ChevronDown />} aria-controls="panel1a-content" id="panel1a-header">
@@ -548,7 +549,7 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Box>
                 </Grid>
                 <Grid item xs={5}>
-                    <Box className="data-container"></Box>
+                    <Box className="data-container" />
                 </Grid>
             </Grid>
         </Container>
