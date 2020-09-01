@@ -40,7 +40,7 @@ function App() {
                     <Box className="app-content">
                         <Router>
                             <Redirect from="/" to="/calendar" noThrow />
-                            <CalendarPage path="/calendar" />
+                            <CalendarPage path="/calendar" default />
                             <ProfilePage path="/profile" />
                         </Router>
                     </Box>
