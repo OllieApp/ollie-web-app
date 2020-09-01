@@ -514,7 +514,7 @@ export function CalendarPage(props: RouteComponentProps) {
         >
             <Container className="create-event-dialog-container">
                 <DialogTitle id="form-dialog-title">Create calendar event</DialogTitle>
-                <DialogContent>
+                <DialogContent style={{ overflowY: 'hidden' }}>
                     <TextField
                         InputProps={{
                             disableUnderline: true,
