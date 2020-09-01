@@ -7,6 +7,7 @@ export default class UserStore {
     rootStore: RootStore;
 
     @observable user: firebase.User | null;
+
     @computed get isAuthenticated() {
         return this.user !== null;
     }
@@ -21,13 +22,17 @@ export default class UserStore {
 
     @action async loginEmail({ email, password }: { email: string; password: string }) {
         try {
-            const res = await auth().signInWithEmailAndPassword(email, password);
-        } catch (error) {}
+            await auth().signInWithEmailAndPassword(email, password);
+        } catch (error) {
+            // TODO: Report
+        }
     }
 
     @action async signUpWithEmail({ email, password }: { email: string; password: string }) {
         try {
-            const res = await auth().createUserWithEmailAndPassword(email, password);
-        } catch (error) {}
+            await auth().createUserWithEmailAndPassword(email, password);
+        } catch (error) {
+            // TODO: Report
+        }
     }
 }
