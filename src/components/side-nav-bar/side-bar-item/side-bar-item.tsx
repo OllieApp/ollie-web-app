@@ -23,7 +23,7 @@ export function SideBarItem(props: SidebarItem) {
         <Link to={path}>
             <div className={classNames('side-bar-item', active && 'active', className)}>
                 <div className="side-bar-icon-container">{getItemIcon(icon, active)}</div>
-                <div className={'side-bar-text'}>
+                <div className="side-bar-text">
                     <span>{label}</span>
                 </div>
             </div>
