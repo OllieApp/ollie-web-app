@@ -32,6 +32,7 @@ module.exports = {
         'consistent-return': 0,
         'react/jsx-props-no-spreading': 0,
         'react-hooks/exhaustive-deps': 0,
+        'react/no-unescaped-entities': 0,
         'react/jsx-no-duplicate-props': [2, { ignoreCase: false }],
     },
 };
