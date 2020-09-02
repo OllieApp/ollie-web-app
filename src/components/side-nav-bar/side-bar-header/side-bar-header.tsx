@@ -2,11 +2,10 @@ import classNames from 'classnames';
 import React from 'react';
 import './side-bar-header.scss';
 
-export interface SideBarHeaderProps {
+export type SideBarHeaderProps = React.PropsWithChildren<{
     className?: string;
-    children?: React.ReactNode;
-}
+}>;
 
-export function SideBarHeader(props: SideBarHeaderProps) {
-    return <div className={classNames('side-bar-header', props.className)}>{props.children}</div>;
+export function SideBarHeader({ className, children }: SideBarHeaderProps) {
+    return <div className={classNames('side-bar-header', className)}>{children}</div>;
 }

@@ -7,7 +7,7 @@ export function AuthPage() {
     return (
         <Container maxWidth="xl" className="">
             <Grid style={{ minHeight: '100vh', width: '100%' }}>
-                <Box className="view-cotaniner"></Box>
+                <Box className="view-cotaniner" />
             </Grid>
         </Container>
     );

@@ -22,17 +22,17 @@ import {
     FormControlLabel,
     Checkbox,
 } from '@material-ui/core';
-import { useStyles } from '../../common/theming/theming';
-import './profile-page.scss';
 import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calendar } from 'react-feather';
+import { KeyboardTimePicker } from '@material-ui/pickers';
+import moment from 'moment';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
+import { useStyles } from '../../common/theming/theming';
 import { mapStyles } from '../../common/theming/map-styles';
 import bonitas from '../../images/bonitas.jpg';
 import discovery from '../../images/discovery.png';
 import medshield from '../../images/medshield.png';
 import momentum from '../../images/momentum.png';
-import { KeyboardTimePicker } from '@material-ui/pickers';
-import moment from 'moment';
+import './profile-page.scss';
 
 enum DoctorSpeciality {
     Unknown,
@@ -65,6 +65,7 @@ const defaultOfficeHours: OfficeHours = {
     weekdayStart: moment(new Date()).set({ hour: 8, minute: 0 }).toDate(),
     weekdayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
 };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProfilePage(props: RouteComponentProps) {
     const classes = useStyles();
     const [tabIndex, setTabIndex] = useState(0);
@@ -76,7 +77,7 @@ export function ProfilePage(props: RouteComponentProps) {
     const [bio, setBio] = useState('');
     const [address, setAddress] = useState('');
     const [appointmentSlot, setAppointmentSlot] = useState(15);
-    const { isLoaded, loadError } = useLoadScript({ googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY });
+    const { isLoaded } = useLoadScript({ googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY });
     const pinMapOptions: google.maps.MapOptions = {
         styles: mapStyles,
         disableDefaultUI: true,
@@ -99,7 +100,7 @@ export function ProfilePage(props: RouteComponentProps) {
     }, []);
     const [medicalAids, setMedicalAids] = useState<MedicalAid[]>([]);
     const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
-    const doctorInfoView = tabIndex == 0 && (
+    const doctorInfoView = tabIndex === 0 && (
         <>
             <Grid direction="row" container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
@@ -279,12 +280,13 @@ export function ProfilePage(props: RouteComponentProps) {
                 <Grid item md={8} xs={12} style={{ position: 'relative' }}>
                     {isLoaded && (
                         <GoogleMap
-                            mapContainerClassName={'map-container'}
+                            mapContainerClassName="map-container"
                             zoom={10}
                             center={{ lat: -28.4792625, lng: 24.6727135 }}
                             options={(pinMapOptions as unknown) as google.maps.MapOptions}
                             onLoad={onPinMapLoad}
                             onCenterChanged={() => {
+                                // eslint-disable-next-line no-console
                                 console.log(pinMapRef?.state.map?.getCenter().toJSON());
                             }}
                             ref={(ref) => setPinMapRef(ref)}
@@ -292,13 +294,13 @@ export function ProfilePage(props: RouteComponentProps) {
                     )}
                     <div className="marker-container">
                         <MapPin color="#2D6455" size="40px" />
-                        <div style={{ height: 40, width: 40 }}></div>
+                        <div style={{ height: 40, width: 40 }} />
                     </div>
                 </Grid>
             </Grid>
         </>
     );
-    const settings = tabIndex == 1 && (
+    const settings = tabIndex === 1 && (
         <>
             <Grid direction="row" container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
@@ -326,7 +328,7 @@ export function ProfilePage(props: RouteComponentProps) {
                         }}
                         disableUnderline
                         value={appointmentSlot}
-                        onChange={(event) => setAppointmentSlot(Number.parseInt(event.target.value as string))}
+                        onChange={(event) => setAppointmentSlot(Number(event.target.value))}
                         variant="filled"
                         displayEmpty
                         fullWidth
@@ -451,13 +453,13 @@ export function ProfilePage(props: RouteComponentProps) {
                                     control={
                                         <Checkbox
                                             color="primary"
-                                            checked={medicalAids.findIndex((x) => x == MedicalAid.Discovery) != -1}
+                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Discovery) !== -1}
                                             onChange={(event, checked) => {
                                                 if (checked) {
                                                     setMedicalAids([...medicalAids, MedicalAid.Discovery]);
                                                     return;
                                                 }
-                                                setMedicalAids(medicalAids.filter((x) => x != MedicalAid.Discovery));
+                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Discovery));
                                             }}
                                             name={MedicalAid[MedicalAid.Discovery]}
                                         />
@@ -476,13 +478,13 @@ export function ProfilePage(props: RouteComponentProps) {
                                     control={
                                         <Checkbox
                                             color="primary"
-                                            checked={medicalAids.findIndex((x) => x == MedicalAid.Momentum) != -1}
+                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Momentum) !== -1}
                                             onChange={(event, checked) => {
                                                 if (checked) {
                                                     setMedicalAids([...medicalAids, MedicalAid.Momentum]);
                                                     return;
                                                 }
-                                                setMedicalAids(medicalAids.filter((x) => x != MedicalAid.Momentum));
+                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Momentum));
                                             }}
                                             name={MedicalAid[MedicalAid.Momentum]}
                                         />
@@ -501,13 +503,13 @@ export function ProfilePage(props: RouteComponentProps) {
                                     control={
                                         <Checkbox
                                             color="primary"
-                                            checked={medicalAids.findIndex((x) => x == MedicalAid.Fedhealth) != -1}
+                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Fedhealth) !== -1}
                                             onChange={(event, checked) => {
                                                 if (checked) {
                                                     setMedicalAids([...medicalAids, MedicalAid.Fedhealth]);
                                                     return;
                                                 }
-                                                setMedicalAids(medicalAids.filter((x) => x != MedicalAid.Fedhealth));
+                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Fedhealth));
                                             }}
                                             name={MedicalAid[MedicalAid.Fedhealth]}
                                         />
@@ -526,13 +528,13 @@ export function ProfilePage(props: RouteComponentProps) {
                                     control={
                                         <Checkbox
                                             color="primary"
-                                            checked={medicalAids.findIndex((x) => x == MedicalAid.Bonitas) != -1}
+                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Bonitas) !== -1}
                                             onChange={(event, checked) => {
                                                 if (checked) {
                                                     setMedicalAids([...medicalAids, MedicalAid.Bonitas]);
                                                     return;
                                                 }
-                                                setMedicalAids(medicalAids.filter((x) => x != MedicalAid.Bonitas));
+                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Bonitas));
                                             }}
                                             name={MedicalAid[MedicalAid.Bonitas]}
                                         />
@@ -551,13 +553,13 @@ export function ProfilePage(props: RouteComponentProps) {
                                     control={
                                         <Checkbox
                                             color="primary"
-                                            checked={medicalAids.findIndex((x) => x == MedicalAid.Medshield) != -1}
+                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Medshield) !== -1}
                                             onChange={(event, checked) => {
                                                 if (checked) {
                                                     setMedicalAids([...medicalAids, MedicalAid.Medshield]);
                                                     return;
                                                 }
-                                                setMedicalAids(medicalAids.filter((x) => x != MedicalAid.Medshield));
+                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Medshield));
                                             }}
                                             name={MedicalAid[MedicalAid.Medshield]}
                                         />
@@ -662,8 +664,8 @@ export function ProfilePage(props: RouteComponentProps) {
                                         />
                                     </Grid>
                                 </Grid>
-                                {(doctorAvailability == DoctorAvailability.WeekdaysAndSat ||
-                                    doctorAvailability == DoctorAvailability.AllDays) && (
+                                {(doctorAvailability === DoctorAvailability.WeekdaysAndSat ||
+                                    doctorAvailability === DoctorAvailability.AllDays) && (
                                     <Grid container xs={12} alignItems="center" style={{ marginBottom: 14 }}>
                                         <Grid item xs={12}>
                                             <Typography color="primary">Saturday</Typography>
@@ -737,7 +739,7 @@ export function ProfilePage(props: RouteComponentProps) {
                                         </Grid>
                                     </Grid>
                                 )}
-                                {doctorAvailability == DoctorAvailability.AllDays && (
+                                {doctorAvailability === DoctorAvailability.AllDays && (
                                     <Grid container xs={12} alignItems="center" style={{ marginBottom: 14 }}>
                                         <Grid item xs={12}>
                                             <Typography color="primary">Sunday</Typography>
@@ -851,7 +853,7 @@ export function ProfilePage(props: RouteComponentProps) {
         </>
     );
 
-    const faq = tabIndex == 2 && (
+    const faq = tabIndex === 2 && (
         <>
             <Accordion elevation={0}>
                 <AccordionSummary expandIcon={<ChevronDown />} aria-controls="panel1a-content" id="panel1a-header">
@@ -944,11 +946,11 @@ export function ProfilePage(props: RouteComponentProps) {
                                     <div className="icon-button-container">
                                         <X size={24} />
                                     </div>
-                                    <Box flexGrow="1"></Box>
+                                    <Box flexGrow="1" />
                                     <div className="icon-button-container">
                                         <Share size={24} />
                                     </div>
-                                    <Box width="10px"></Box>
+                                    <Box width="10px" />
                                     <div className="icon-button-container">
                                         <Heart size={24} />
                                     </div>
@@ -969,12 +971,13 @@ export function ProfilePage(props: RouteComponentProps) {
                                 <Box width="100%" height="80%" position="relative" marginBottom="60px">
                                     {isLoaded && (
                                         <GoogleMap
-                                            mapContainerClassName={'listing-preview-map-container'}
+                                            mapContainerClassName="listing-preview-map-container"
                                             zoom={10}
                                             center={{ lat: -28.4792625, lng: 24.6727135 }}
                                             options={(previewMapOptions as unknown) as google.maps.MapOptions}
                                             onLoad={onPreviewMapLoad}
                                             onCenterChanged={() => {
+                                                // eslint-disable-next-line no-console
                                                 console.log(previewMapRef?.state.map?.getCenter().toJSON());
                                             }}
                                             ref={(ref) => setPreviewMapRef(ref)}
@@ -982,7 +985,7 @@ export function ProfilePage(props: RouteComponentProps) {
                                     )}
                                     <div className="marker-container">
                                         <MapPin color="#2D6455" size="20px" />
-                                        <div style={{ height: 20, width: 20 }}></div>
+                                        <div style={{ height: 20, width: 20 }} />
                                     </div>
                                 </Box>
                             </Box>
@@ -1021,12 +1024,12 @@ export function ProfilePage(props: RouteComponentProps) {
                                         <Typography variant="body1" align="center">
                                             per consultation
                                         </Typography>
-                                        <Box height="10px"></Box>
+                                        <Box height="10px" />
                                         <Box display="flex" flexDirection="row">
-                                            <img className="medical-aid-img" src={discovery} />
-                                            <img className="medical-aid-img" src={momentum} />
-                                            <img className="medical-aid-img" src={bonitas} />
-                                            <img className="medical-aid-img" src={medshield} />
+                                            <img className="medical-aid-img" src={discovery} alt="" />
+                                            <img className="medical-aid-img" src={momentum} alt="" />
+                                            <img className="medical-aid-img" src={bonitas} alt="" />
+                                            <img className="medical-aid-img" src={medshield} alt="" />
                                             <span className="medical-aid-img"> +2</span>
                                         </Box>
                                     </Box>
@@ -1043,7 +1046,7 @@ export function ProfilePage(props: RouteComponentProps) {
                                         <Typography variant="body1" align="center">
                                             08:00 - 17:00
                                         </Typography>
-                                        <Box height="10px"></Box>
+                                        <Box height="10px" />
                                         <Typography variant="body1" align="center">
                                             Sat
                                         </Typography>

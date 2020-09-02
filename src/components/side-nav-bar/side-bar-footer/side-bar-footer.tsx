@@ -2,11 +2,10 @@ import classNames from 'classnames';
 import React from 'react';
 import './side-bar-footer.scss';
 
-export interface SideBarFooterProps {
+export type SideBarFooterProps = React.PropsWithChildren<{
     className?: string;
-    children?: React.ReactNode;
-}
+}>;
 
-export function SideBarFooter(props: SideBarFooterProps) {
-    return <div className={classNames('side-bar-footer', props.className)}>{props.children}</div>;
+export function SideBarFooter({ className, children }: SideBarFooterProps) {
+    return <div className={classNames('side-bar-footer', className)}>{children}</div>;
 }
