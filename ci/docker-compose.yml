@@ -1,0 +1,16 @@
+version: '3.3'
+services:
+    app:
+        tty: true
+        container_name: ollie-web
+        build:
+            context: ../
+            dockerfile: ci/Dockerfile
+        volumes:
+            - '../:/app'
+            - '/app/node_modules'
+        ports:
+            - '3000:3000'
+        environment:
+            - NODE_ENV=development
+            - CHOKIDAR_USEPOLLING=true
