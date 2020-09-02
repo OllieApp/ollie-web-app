@@ -4,10 +4,10 @@ services:
         tty: true
         container_name: ollie-web
         build:
-            context: .
-            dockerfile: Dockerfile
+            context: ../
+            dockerfile: ci/Dockerfile
         volumes:
-            - '.:/app'
+            - '../:/app'
             - '/app/node_modules'
         ports:
             - '3000:3000'
