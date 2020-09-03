@@ -19,6 +19,7 @@ body::-webkit-scrollbar {
 body {
   scrollbar-width: thin;
   scrollbar-color: var(--thumbBG) var(--scrollbarBG);
+  color: #20352e;
 }
 
 body::-webkit-scrollbar-track {
