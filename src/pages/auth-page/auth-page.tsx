@@ -3,6 +3,13 @@ import { RouteComponentProps } from '@reach/router';
 import { Box, makeStyles, Typography, Button, Grid } from '@material-ui/core';
 import logo from '../../logo.svg';
 
+const useStyles = makeStyles({
+    logo: {
+        width: '180px',
+        height: 'auto',
+    },
+});
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AuthPage(props: RouteComponentProps) {
     const styles = useStyles();
@@ -35,10 +42,3 @@ export function AuthPage(props: RouteComponentProps) {
         </Box>
     );
 }
-
-const useStyles = makeStyles({
-    logo: {
-        width: '180px',
-        height: 'auto',
-    },
-});
