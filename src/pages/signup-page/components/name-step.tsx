@@ -9,7 +9,7 @@ export function NameStep({ values, errors, step, onChange, onBlur }: StepViewPro
             <StepHeader step={step + 1} title="What is your name?" />
             <Box mt={3}>
                 <Grid container spacing={3}>
-                    <Grid item>
+                    <Grid item xs>
                         <TextField
                             name="firstName"
                             variant="filled"
@@ -21,7 +21,7 @@ export function NameStep({ values, errors, step, onChange, onBlur }: StepViewPro
                             fullWidth
                         />
                     </Grid>
-                    <Grid item>
+                    <Grid item xs>
                         <TextField
                             name="lastName"
                             variant="filled"
