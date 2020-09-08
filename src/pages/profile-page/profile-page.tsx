@@ -26,7 +26,6 @@ import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calen
 import { KeyboardTimePicker } from '@material-ui/pickers';
 import moment from 'moment';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
-import { useStyles } from '../../common/theming/theming';
 import { mapStyles } from '../../common/theming/map-styles';
 import bonitas from '../../images/bonitas.jpg';
 import discovery from '../../images/discovery.png';
@@ -67,7 +66,6 @@ const defaultOfficeHours: OfficeHours = {
 };
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProfilePage(props: RouteComponentProps) {
-    const classes = useStyles();
     const [tabIndex, setTabIndex] = useState(0);
     const [name, setName] = useState<string>('');
     const [doctorSpeciality, setDoctorSpeciality] = useState<DoctorSpeciality>(DoctorSpeciality.Unknown);
@@ -101,23 +99,13 @@ export function ProfilePage(props: RouteComponentProps) {
     const [medicalAids, setMedicalAids] = useState<MedicalAid[]>([]);
     const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
     const doctorInfoView = tabIndex === 0 && (
-        <>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+        <Grid direction="column" spacing={1} container>
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Name</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={name}
                         onChange={(event) => setName(event.target.value as string)}
                         variant="filled"
@@ -127,30 +115,13 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Category</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <Select
                         id="category-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={doctorSpeciality}
                         onChange={(event) => setDoctorSpeciality(event.target.value as DoctorSpeciality)}
@@ -165,22 +136,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Email</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={email}
                         onChange={(event: { target: { value: string } }) => setEmail(event.target.value as string)}
                         variant="filled"
@@ -192,22 +153,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Phone</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={phone}
                         onChange={(event: { target: { value: string } }) => setPhone(event.target.value as string)}
                         variant="filled"
@@ -218,22 +169,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
+            <Grid direction="row" item container>
                 <Grid item md={4} xs={12}>
                     <p>Bio</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px', padding: '12px 10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 10px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={bio}
                         onChange={(event: { target: { value: string } }) => setBio(event.target.value as string)}
                         variant="filled"
@@ -245,22 +186,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
+            <Grid direction="row" item container>
                 <Grid item md={4} xs={12}>
                     <p>Address</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px', padding: '12px 10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 10px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={address}
                         onChange={(event: { target: { value: string } }) => setAddress(event.target.value as string)}
                         variant="filled"
@@ -273,7 +204,7 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
+            <Grid direction="row" item container>
                 <Grid item md={4} xs={12}>
                     <p>Pin location</p>
                 </Grid>
@@ -298,34 +229,17 @@ export function ProfilePage(props: RouteComponentProps) {
                     </div>
                 </Grid>
             </Grid>
-        </>
+        </Grid>
     );
     const settings = tabIndex === 1 && (
-        <>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+        <Grid direction="column" spacing={1} container>
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Appointment time slot</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <Select
                         id="appointment-slot-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={appointmentSlot}
                         onChange={(event) => setAppointmentSlot(Number(event.target.value))}
@@ -341,30 +255,13 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Availability</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <Select
                         id="category-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={doctorAvailability}
                         onChange={(event) => setDoctorAvailability(event.target.value as DoctorAvailability)}
@@ -378,30 +275,13 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Consultation pricing</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <Select
                         id="category-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={consultationPricing}
                         onChange={(event) => setConsultationPricing(event.target.value as number)}
@@ -422,19 +302,24 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
+            <Grid direction="row" item container>
                 <Grid item md={4} xs={12}>
                     <p>Medical aids supported</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <Accordion
                         elevation={0}
-                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.09)', marginBottom: '10px', borderRadius: 30 }}
+                        style={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.09)',
+                            marginBottom: '10px',
+                            borderRadius: 20,
+                        }}
                     >
                         <AccordionSummary
                             expandIcon={<ChevronDown />}
                             aria-controls="panel1a-content"
                             id="panel1a-header"
+                            style={{ paddingTop: 4, paddingBottom: 4 }}
                         >
                             <Typography color="primary" style={{ fontWeight: 'bold' }}>
                                 Medical aids
@@ -572,19 +457,20 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Accordion>
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
+            <Grid direction="row" item container>
                 <Grid item md={4} xs={12}>
                     <p>Office hours</p>
                 </Grid>
                 <Grid item md={8} xs={12}>
                     <Accordion
                         elevation={0}
-                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.09)', marginBottom: '10px', borderRadius: 30 }}
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.09)', marginBottom: '10px', borderRadius: 20 }}
                     >
                         <AccordionSummary
                             expandIcon={<ChevronDown />}
                             aria-controls="panel1a-content"
                             id="panel1a-header"
+                            style={{ paddingTop: 4, paddingBottom: 4 }}
                         >
                             <Typography color="primary" style={{ fontWeight: 'bold' }}>
                                 Hours
@@ -605,16 +491,6 @@ export function ProfilePage(props: RouteComponentProps) {
                                         justify="space-between"
                                     >
                                         <KeyboardTimePicker
-                                            margin="dense"
-                                            InputProps={{
-                                                disableUnderline: true,
-                                                style: { borderRadius: 15, width: '160px' },
-                                            }}
-                                            inputProps={{
-                                                style: {
-                                                    paddingTop: '12px',
-                                                },
-                                            }}
                                             InputAdornmentProps={{
                                                 style: {
                                                     padding: 0,
@@ -635,16 +511,9 @@ export function ProfilePage(props: RouteComponentProps) {
                                             to
                                         </Typography>
                                         <KeyboardTimePicker
-                                            margin="dense"
                                             InputProps={{
                                                 disableUnderline: true,
-                                                style: { borderRadius: 15, width: '160px' },
-                                            }}
-                                            inputProps={{
-                                                style: {
-                                                    paddingTop: '12px',
-                                                    paddingBottom: '12px',
-                                                },
+                                                style: { width: '160px' },
                                             }}
                                             InputAdornmentProps={{
                                                 style: {
@@ -679,10 +548,9 @@ export function ProfilePage(props: RouteComponentProps) {
                                             justify="space-between"
                                         >
                                             <KeyboardTimePicker
-                                                margin="dense"
                                                 InputProps={{
                                                     disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
+                                                    style: { width: '160px' },
                                                 }}
                                                 inputProps={{
                                                     style: {
@@ -709,10 +577,9 @@ export function ProfilePage(props: RouteComponentProps) {
                                                 to
                                             </Typography>
                                             <KeyboardTimePicker
-                                                margin="dense"
                                                 InputProps={{
                                                     disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
+                                                    style: { width: '160px' },
                                                 }}
                                                 inputProps={{
                                                     style: {
@@ -753,11 +620,6 @@ export function ProfilePage(props: RouteComponentProps) {
                                             justify="space-between"
                                         >
                                             <KeyboardTimePicker
-                                                margin="dense"
-                                                InputProps={{
-                                                    disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
-                                                }}
                                                 inputProps={{
                                                     style: {
                                                         paddingTop: '12px',
@@ -783,11 +645,6 @@ export function ProfilePage(props: RouteComponentProps) {
                                                 to
                                             </Typography>
                                             <KeyboardTimePicker
-                                                margin="dense"
-                                                InputProps={{
-                                                    disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
-                                                }}
                                                 inputProps={{
                                                     style: {
                                                         paddingTop: '12px',
@@ -818,13 +675,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Accordion>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
+            <Grid direction="row" item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs={12}>
                     <p>Account options</p>
                 </Grid>
                 <Grid item md={8} xs={12} style={{ display: 'flex' }}>
                     <Button
-                        className={classes.accentButton}
                         color="default"
                         variant="contained"
                         disableElevation
@@ -833,11 +689,10 @@ export function ProfilePage(props: RouteComponentProps) {
                         }}
                         fullWidth
                     >
-                        <p>Cancel subscription</p>
+                        Cancel subscription
                     </Button>
                     <Box width="20px" />
                     <Button
-                        className={classes.accentButton}
                         color="default"
                         variant="contained"
                         disableElevation
@@ -846,11 +701,11 @@ export function ProfilePage(props: RouteComponentProps) {
                         }}
                         fullWidth
                     >
-                        <p>Delete account</p>
+                        Delete account
                     </Button>
                 </Grid>
             </Grid>
-        </>
+        </Grid>
     );
 
     const faq = tabIndex === 2 && (
@@ -887,7 +742,6 @@ export function ProfilePage(props: RouteComponentProps) {
                     <p>We are eager to help you.</p>
                     <Box width="20px" />
                     <Button
-                        className={classes.accentButton}
                         color="primary"
                         variant="contained"
                         disableElevation
@@ -895,7 +749,7 @@ export function ProfilePage(props: RouteComponentProps) {
                             // open live chat
                         }}
                     >
-                        <p>Open live chat</p>
+                        Open live chat
                     </Button>
                 </Box>
             </Box>
