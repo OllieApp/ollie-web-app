@@ -1,5 +1,5 @@
 import React from 'react';
-import { RouteComponentProps } from '@reach/router';
+import { Link, RouteComponentProps } from '@reach/router';
 import { Box, makeStyles, Typography, Button, Grid } from '@material-ui/core';
 import logo from '../../logo.svg';
 
@@ -27,14 +27,18 @@ export function AuthPage(props: RouteComponentProps) {
                     </Box>
                     <Grid container spacing={3}>
                         <Grid item xs>
-                            <Button variant="text" color="primary" size="large" fullWidth>
-                                log in
-                            </Button>
+                            <Link to="/login">
+                                <Button variant="text" color="primary" size="large" fullWidth>
+                                    log in
+                                </Button>
+                            </Link>
                         </Grid>
                         <Grid item xs>
-                            <Button variant="contained" color="primary" size="large" fullWidth>
-                                sign up
-                            </Button>
+                            <Link to="/signup">
+                                <Button variant="contained" color="primary" size="large" fullWidth>
+                                    sign up
+                                </Button>
+                            </Link>
                         </Grid>
                     </Grid>
                 </Box>
