@@ -1,26 +1,43 @@
 /* eslint-disable @typescript-eslint/ban-ts-ignore */
-import { makeStyles, createMuiTheme } from '@material-ui/core';
+import React from 'react';
+import { makeStyles, createMuiTheme, createSvgIcon } from '@material-ui/core';
+import { Shadows } from '@material-ui/core/styles/shadows';
+
+const SelectArrowIcon = createSvgIcon(
+    <path d="M20.53,8l-.78-.76a.47.47,0,0,0-.66,0L12,14.21,4.91,7.27a.47.47,0,0,0-.66,0L3.47,8a.47.47,0,0,0,0,.66l8.2,8a.47.47,0,0,0,.66,0l8.2-8a.47.47,0,0,0,0-.66Z" />,
+    'ArrowDropDown',
+);
+
+const defaultTheme = createMuiTheme();
+
+const palette = {
+    primary: {
+        main: '#2D6455',
+    },
+    secondary: {
+        main: '#EDED85',
+    },
+    // @ts-ignore
+    gray: {
+        '94': 'F0F0F0',
+        bg: '#FAFAFA',
+        bg2: '#eaeaea',
+        darker: '#D8D8D8',
+        darkest: '#ededed',
+    },
+    text: {
+        primary: '#20352e',
+        secondary: '#757575',
+    },
+};
+
+const shadows = [...defaultTheme.shadows] as Shadows;
+
+shadows[1] = '0px 2px 8px -2px rgba(0,0,0,0.08)';
 
 export const theme = createMuiTheme({
-    palette: {
-        primary: {
-            main: '#2D6455',
-        },
-        secondary: {
-            main: '#EDED85',
-        },
-        // @ts-ignore
-        gray: {
-            '94': 'F0F0F0',
-            bg: '#FAFAFA',
-            darker: '#D8D8D8',
-            darkest: '#ededed',
-        },
-        text: {
-            primary: '#20352e',
-            secondary: '#757575',
-        },
-    },
+    palette,
+    shadows,
     typography: {
         fontFamily: 'Poppins',
         h1: {
@@ -46,6 +63,7 @@ export const theme = createMuiTheme({
             letterSpacing: 0,
             lineHeight: 1.2,
             fontWeight: 900,
+            textTransform: 'none',
         },
         button: {
             textTransform: 'none',
@@ -56,14 +74,78 @@ export const theme = createMuiTheme({
             root: {
                 fontWeight: 900,
                 fontSize: 16,
-                borderRadius: 15,
-                padding: '8px 16px',
+                borderRadius: 20,
+                padding: '14px 25px',
+            },
+            outlined: {
+                padding: '14px 25px',
+            },
+            text: {
+                padding: '14px 25px',
             },
             sizeLarge: {
                 fontSize: 18,
                 borderRadius: 25,
                 padding: '18px 25px',
             },
+        },
+        MuiInputBase: {
+            root: {
+                color: palette.primary.main,
+            },
+        },
+        MuiFilledInput: {
+            root: {
+                borderRadius: 20,
+                backgroundColor: palette.gray.bg2,
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+            },
+            input: {
+                padding: '18.5px 18px 18.5px',
+                borderRadius: 20,
+                '&': {
+                    borderRadius: 20,
+                },
+            },
+            inputMultiline: {
+                padding: '18.5px 18 18.5px',
+                borderRadius: 20,
+                '&': {
+                    borderRadius: 20,
+                },
+            },
+            multiline: {
+                padding: 0,
+            },
+        },
+        MuiSelect: {
+            select: {
+                borderRadius: 20,
+                '&:focus': {
+                    borderRadius: 20,
+                },
+            },
+            filled: {
+                paddingRight: '52px !important',
+            },
+            iconFilled: {
+                top: 'calc(50% - 11px)',
+                right: 18,
+            },
+        },
+        MuiPaper: {
+            rounded: {
+                borderRadius: 15,
+            },
+        },
+    },
+    props: {
+        MuiFilledInput: {
+            disableUnderline: true,
+        },
+        MuiSelect: {
+            IconComponent: SelectArrowIcon,
         },
     },
 });
@@ -77,12 +159,5 @@ export const useStyles = makeStyles({
         color: 'white',
         height: 48,
         padding: '0 30px',
-    },
-    accentButton: {
-        borderRadius: 15,
-        paddingLeft: '25px',
-        paddingRight: '25px',
-        fontWeight: 900,
-        fontSize: 14,
     },
 });

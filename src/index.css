@@ -1,25 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
 
-body {
-  margin: 0;
-  font-family: 'Poppins', sans-serif;
+html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-html {
   --scrollbarBG: #F0F0F0;
   --thumbBG: #D8D8D8;
 }
 
-body::-webkit-scrollbar {
-  width: 11px;
-}
-
 body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
   scrollbar-width: thin;
   scrollbar-color: var(--thumbBG) var(--scrollbarBG);
   color: #20352e;
+}
+
+body::-webkit-scrollbar {
+  width: 11px;
 }
 
 body::-webkit-scrollbar-track {
@@ -33,5 +30,9 @@ body::-webkit-scrollbar-thumb {
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  monospace;
+}
+
+a {
+  text-decoration: none;
 }

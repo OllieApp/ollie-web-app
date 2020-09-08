@@ -13,6 +13,7 @@ import { SideBarHeader } from '../../components/side-nav-bar/side-bar-header/sid
 import { CalendarPage } from '../calendar-page/calendar-page';
 import { ProfilePage } from '../profile-page/profile-page';
 import { AuthPage } from '../auth-page/auth-page';
+import { SignUpPage } from '../signup-page/signup-page';
 // import { SettingsPage } from '../settings-page/settings-page';
 import { ReactComponent as Logo } from '../../images/ollie_ears_w_text.svg';
 import { theme } from '../../common/theming/theming';
@@ -36,6 +37,10 @@ const routes: Record<string, AppRoute> = {
     },
     '/auth': {
         component: AuthPage,
+        sidebar: false,
+    },
+    '/signup': {
+        component: SignUpPage,
         sidebar: false,
     },
 };
