@@ -3,6 +3,8 @@ import { Box, Select, MenuItem } from '@material-ui/core';
 import { StepViewProps } from '../types';
 import { StepHeader } from './step-header';
 
+const categories = ['General Practitioner', 'Psychologist', 'Physiotherapist', 'Gynecologist', 'Dentist'];
+
 export function CategoryStep({ values, errors, step, onChange, onBlur }: StepViewProps) {
     return (
         <Box pt={4} pb={6}>
@@ -18,9 +20,11 @@ export function CategoryStep({ values, errors, step, onChange, onBlur }: StepVie
                     error={!!errors.category}
                     fullWidth
                 >
-                    <MenuItem value="General practitioner">General practitioner</MenuItem>
-                    <MenuItem value="General practitioner 2">General practitioner 2</MenuItem>
-                    <MenuItem value="General practitioner 3">General practitioner 3</MenuItem>
+                    {categories.map((category) => (
+                        <MenuItem key={category} value={category}>
+                            {category}
+                        </MenuItem>
+                    ))}
                 </Select>
             </Box>
         </Box>

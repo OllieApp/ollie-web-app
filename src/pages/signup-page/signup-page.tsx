@@ -43,7 +43,7 @@ const initialValues: FormState = {
     lastName: '',
     email: '',
     password: '',
-    category: 'General practitioner',
+    category: 'General Practitioner',
     gender: '',
 };
 
