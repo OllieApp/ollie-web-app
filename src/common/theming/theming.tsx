@@ -21,6 +21,7 @@ const palette = {
     gray: {
         '94': 'F0F0F0',
         bg: '#FAFAFA',
+        bg2: '#eaeaea',
         darker: '#D8D8D8',
         darkest: '#ededed',
     },
@@ -76,6 +77,9 @@ export const theme = createMuiTheme({
                 borderRadius: 20,
                 padding: '14px 25px',
             },
+            outlined: {
+                padding: '14px 25px',
+            },
             text: {
                 padding: '14px 25px',
             },
@@ -93,17 +97,26 @@ export const theme = createMuiTheme({
         MuiFilledInput: {
             root: {
                 borderRadius: 20,
-                backgroundColor: 'white',
+                backgroundColor: palette.gray.bg2,
                 borderTopLeftRadius: 20,
                 borderTopRightRadius: 20,
-                boxShadow: shadows[1],
             },
             input: {
-                padding: '18.5px 27px 18.5px',
+                padding: '18.5px 18px 18.5px',
                 borderRadius: 20,
-                '&:focus': {
+                '&': {
                     borderRadius: 20,
                 },
+            },
+            inputMultiline: {
+                padding: '18.5px 18 18.5px',
+                borderRadius: 20,
+                '&': {
+                    borderRadius: 20,
+                },
+            },
+            multiline: {
+                padding: 0,
             },
         },
         MuiSelect: {
@@ -112,6 +125,9 @@ export const theme = createMuiTheme({
                 '&:focus': {
                     borderRadius: 20,
                 },
+            },
+            filled: {
+                paddingRight: '52px !important',
             },
             iconFilled: {
                 top: 'calc(50% - 11px)',
@@ -143,12 +159,5 @@ export const useStyles = makeStyles({
         color: 'white',
         height: 48,
         padding: '0 30px',
-    },
-    accentButton: {
-        borderRadius: 15,
-        paddingLeft: '25px',
-        paddingRight: '25px',
-        fontWeight: 900,
-        fontSize: 14,
     },
 });
