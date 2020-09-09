@@ -26,13 +26,15 @@ import {
     InputAdornment,
     ButtonGroup,
 } from '@material-ui/core';
-import { Plus } from 'react-feather';
+import { Plus, User, Video } from 'react-feather';
 import { KeyboardTimePicker, KeyboardDatePicker } from '@material-ui/pickers';
 import moment from 'moment';
 import interactionPlugin from '@fullcalendar/interaction'; // needed for dayClick
 import rrulePlugin from '@fullcalendar/rrule';
 import { RRule, Frequency } from 'rrule';
 import { CirclePicker } from 'react-color';
+import { firestore } from '../../common/firebase/firebase-wrapper';
+import { useStore } from '../../common/stores/index';
 
 interface DoctorCalendarEvent {
     type: 'consultation' | 'video';
@@ -60,6 +62,9 @@ interface CalendarEvent {
     rrule?: string;
     backgroundColor?: string;
     borderColor?: string;
+    extendedProps?: {
+        eventType?: 'consultation' | 'video';
+    };
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function CalendarPage(props: RouteComponentProps) {
@@ -107,6 +112,7 @@ export function CalendarPage(props: RouteComponentProps) {
         { id: '231233', title: 'Bob Martini', start: '2020-08-18T08:00:00+02:00', end: '2020-08-18T09:00:00+02:00' },
     ]);
     const [eventColor, setEventColor] = useState<string | null>('');
+    const { userStore } = useStore();
 
     const businessHours = [
         {
@@ -120,6 +126,26 @@ export function CalendarPage(props: RouteComponentProps) {
             endTime: '16:00', // 4pm
         },
     ];
+
+    useEffect(() => {
+        const unsubscribe = firestore()
+            .collection('appointments')
+            .where('doctor_id', '==', userStore.user?.uid)
+            .onSnapshot((snap) => {
+                const data: CalendarEvent[] = snap.docs.map((doc) => ({
+                    title: doc.get('user_name'),
+                    start: (doc.get('start_date') as firebase.firestore.Timestamp).toDate().toISOString(),
+                    id: doc.id,
+                    end: (doc.get('end_date') as firebase.firestore.Timestamp).toDate().toISOString(),
+                    extendedProps: {
+                        eventType: (doc.get('consultation_type') as string) === 'video' ? 'video' : 'consultation',
+                    },
+                }));
+                setEvents(data);
+            });
+
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         if (isAllDay) {
@@ -734,11 +760,11 @@ export function CalendarPage(props: RouteComponentProps) {
             const compareRes = aDateString.localeCompare(bDateString, 'en');
             switch (compareRes) {
                 case 1:
-                    return aDateString;
-                case -1:
                     return bDateString;
-                default:
+                case -1:
                     return aDateString;
+                default:
+                    return bDateString;
             }
         });
 
@@ -810,7 +836,21 @@ export function CalendarPage(props: RouteComponentProps) {
                             // const endDate = args.event.end;
                             // const padTime = (value: number | undefined) => (value ?? '').toString().padStart(2, '0');
                             if (args.event.allDay) return undefined;
-                            return undefined;
+                            return (
+                                <div style={{ overflow: 'hidden', height: 'inherit' }}>
+                                    <div>{args.timeText}</div>
+                                    <div>
+                                        <span>
+                                            {args.event.extendedProps.eventType === 'consultation' ? (
+                                                <User size="14" />
+                                            ) : (
+                                                <Video size="14" />
+                                            )}
+                                        </span>
+                                        {` ${args.event.title}`}
+                                    </div>
+                                </div>
+                            );
                         }}
                         eventTimeFormat={{
                             hour: 'numeric',
