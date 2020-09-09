@@ -1,14 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-ts-ignore */
 import React from 'react';
 import { makeStyles, createMuiTheme, createSvgIcon } from '@material-ui/core';
-import { Shadows } from '@material-ui/core/styles/shadows';
 
 const SelectArrowIcon = createSvgIcon(
     <path d="M20.53,8l-.78-.76a.47.47,0,0,0-.66,0L12,14.21,4.91,7.27a.47.47,0,0,0-.66,0L3.47,8a.47.47,0,0,0,0,.66l8.2,8a.47.47,0,0,0,.66,0l8.2-8a.47.47,0,0,0,0-.66Z" />,
     'ArrowDropDown',
 );
-
-const defaultTheme = createMuiTheme();
 
 const palette = {
     primary: {
@@ -31,13 +28,8 @@ const palette = {
     },
 };
 
-const shadows = [...defaultTheme.shadows] as Shadows;
-
-shadows[1] = '0px 2px 8px -2px rgba(0,0,0,0.08)';
-
 export const theme = createMuiTheme({
     palette,
-    shadows,
     typography: {
         fontFamily: 'Poppins',
         h1: {
@@ -102,32 +94,42 @@ export const theme = createMuiTheme({
                 borderTopRightRadius: 20,
             },
             input: {
-                padding: '18.5px 18px 18.5px',
                 borderRadius: 20,
-                '&': {
-                    borderRadius: 20,
-                },
-            },
-            inputMultiline: {
-                padding: '18.5px 18 18.5px',
-                borderRadius: 20,
+                padding: '18.5px 12px',
                 '&': {
                     borderRadius: 20,
                 },
             },
             multiline: {
-                padding: 0,
+                padding: '18.5px 12px',
+            },
+            inputMultiline: {
+                padding: '0 !important',
+                borderRadius: 0,
+                '&': {
+                    borderRadius: 0,
+                },
+                '&:-webkit-autofill': {
+                    borderRadius: 0,
+                },
+            },
+        },
+        MuiInputLabel: {
+            filled: {
+                '&$shrink': {
+                    transform: 'translate(12px, 6px) scale(0.75)',
+                },
             },
         },
         MuiSelect: {
             select: {
                 borderRadius: 20,
+                paddingTop: 18.5,
+                paddingBottom: 18.5,
+                paddingRight: '52px !important',
                 '&:focus': {
                     borderRadius: 20,
                 },
-            },
-            filled: {
-                paddingRight: '52px !important',
             },
             iconFilled: {
                 top: 'calc(50% - 11px)',
