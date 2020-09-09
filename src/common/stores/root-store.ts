@@ -1,3 +1,4 @@
+import { createContext } from 'react';
 import UserStore from './user-store';
 
 export class RootStore {
@@ -8,6 +9,6 @@ export class RootStore {
     }
 }
 
-const rootStore = new RootStore();
+const rootStore = createContext(new RootStore());
 
 export default rootStore;
