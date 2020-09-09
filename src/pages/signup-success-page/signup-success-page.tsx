@@ -29,7 +29,7 @@ export function SignUpSuccessPage(props: RouteComponentProps) {
                         </Typography>
                         <Box mt={2}>
                             <Typography variant="h3" style={{ fontWeight: 400 }}>
-                                you can now log in to complete your profile setup.
+                                Continue to the platform to complete your profile setup.
                             </Typography>
                         </Box>
                     </Box>
