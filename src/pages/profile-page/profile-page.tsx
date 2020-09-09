@@ -26,7 +26,6 @@ import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calen
 import { KeyboardTimePicker } from '@material-ui/pickers';
 import moment from 'moment';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
-import { useStyles } from '../../common/theming/theming';
 import { mapStyles } from '../../common/theming/map-styles';
 import bonitas from '../../images/bonitas.jpg';
 import discovery from '../../images/discovery.png';
@@ -67,7 +66,6 @@ const defaultOfficeHours: OfficeHours = {
 };
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProfilePage(props: RouteComponentProps) {
-    const classes = useStyles();
     const [tabIndex, setTabIndex] = useState(0);
     const [name, setName] = useState<string>('');
     const [doctorSpeciality, setDoctorSpeciality] = useState<DoctorSpeciality>(DoctorSpeciality.Unknown);
@@ -101,23 +99,13 @@ export function ProfilePage(props: RouteComponentProps) {
     const [medicalAids, setMedicalAids] = useState<MedicalAid[]>([]);
     const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
     const doctorInfoView = tabIndex === 0 && (
-        <>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+        <Grid direction="column" spacing={1} container>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Name</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={name}
                         onChange={(event) => setName(event.target.value as string)}
                         variant="filled"
@@ -127,30 +115,13 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Category</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <Select
                         id="category-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={doctorSpeciality}
                         onChange={(event) => setDoctorSpeciality(event.target.value as DoctorSpeciality)}
@@ -165,22 +136,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Email</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={email}
                         onChange={(event: { target: { value: string } }) => setEmail(event.target.value as string)}
                         variant="filled"
@@ -192,22 +153,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Phone</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={phone}
                         onChange={(event: { target: { value: string } }) => setPhone(event.target.value as string)}
                         variant="filled"
@@ -218,22 +169,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
-                <Grid item md={4} xs={12}>
+            <Grid item container>
+                <Grid item md={4} xs>
                     <p>Bio</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px', padding: '12px 10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 10px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={bio}
                         onChange={(event: { target: { value: string } }) => setBio(event.target.value as string)}
                         variant="filled"
@@ -245,22 +186,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
-                <Grid item md={4} xs={12}>
+            <Grid item container>
+                <Grid item md={4} xs>
                     <p>Address</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 30, marginBottom: '10px', padding: '12px 10px' },
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 10px',
-                                borderRadius: 30,
-                            },
-                        }}
                         value={address}
                         onChange={(event: { target: { value: string } }) => setAddress(event.target.value as string)}
                         variant="filled"
@@ -273,11 +204,11 @@ export function ProfilePage(props: RouteComponentProps) {
                     />
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
-                <Grid item md={4} xs={12}>
+            <Grid item container>
+                <Grid item md={4} xs>
                     <p>Pin location</p>
                 </Grid>
-                <Grid item md={8} xs={12} style={{ position: 'relative' }}>
+                <Grid item md={8} xs style={{ position: 'relative' }}>
                     {isLoaded && (
                         <GoogleMap
                             mapContainerClassName="map-container"
@@ -298,34 +229,17 @@ export function ProfilePage(props: RouteComponentProps) {
                     </div>
                 </Grid>
             </Grid>
-        </>
+        </Grid>
     );
     const settings = tabIndex === 1 && (
-        <>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+        <Grid direction="column" spacing={1} container>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Appointment time slot</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <Select
                         id="appointment-slot-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={appointmentSlot}
                         onChange={(event) => setAppointmentSlot(Number(event.target.value))}
@@ -341,30 +255,13 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Availability</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <Select
                         id="category-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={doctorAvailability}
                         onChange={(event) => setDoctorAvailability(event.target.value as DoctorAvailability)}
@@ -378,30 +275,13 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Consultation pricing</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <Select
                         id="category-select"
-                        style={{
-                            borderRadius: 30,
-                            marginBottom: '10px',
-                        }}
-                        inputProps={{
-                            style: {
-                                padding: '12px 20px',
-                                borderRadius: 30,
-                            },
-                        }}
-                        SelectDisplayProps={{
-                            style: {
-                                paddingTop: '12px',
-                                paddingLeft: '18px',
-                                borderRadius: 30,
-                            },
-                        }}
                         disableUnderline
                         value={consultationPricing}
                         onChange={(event) => setConsultationPricing(event.target.value as number)}
@@ -422,19 +302,24 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Select>
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
-                <Grid item md={4} xs={12}>
+            <Grid item container>
+                <Grid item md={4} xs>
                     <p>Medical aids supported</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <Accordion
                         elevation={0}
-                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.09)', marginBottom: '10px', borderRadius: 30 }}
+                        style={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.09)',
+                            marginBottom: '10px',
+                            borderRadius: 20,
+                        }}
                     >
                         <AccordionSummary
                             expandIcon={<ChevronDown />}
                             aria-controls="panel1a-content"
                             id="panel1a-header"
+                            style={{ paddingTop: 4, paddingBottom: 4 }}
                         >
                             <Typography color="primary" style={{ fontWeight: 'bold' }}>
                                 Medical aids
@@ -572,123 +457,34 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Accordion>
                 </Grid>
             </Grid>
-            <Grid direction="row" container>
-                <Grid item md={4} xs={12}>
+            <Grid item container>
+                <Grid item md={4} xs>
                     <p>Office hours</p>
                 </Grid>
-                <Grid item md={8} xs={12}>
+                <Grid item md={8} xs>
                     <Accordion
                         elevation={0}
-                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.09)', marginBottom: '10px', borderRadius: 30 }}
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.09)', marginBottom: '10px', borderRadius: 20 }}
                     >
                         <AccordionSummary
                             expandIcon={<ChevronDown />}
                             aria-controls="panel1a-content"
                             id="panel1a-header"
+                            style={{ paddingTop: 4, paddingBottom: 4 }}
                         >
                             <Typography color="primary" style={{ fontWeight: 'bold' }}>
                                 Hours
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
-                            <Grid container>
-                                <Grid container xs={12} alignItems="center" style={{ marginBottom: 14 }}>
-                                    <Grid item xs={12}>
+                            <Grid container direction="column" spacing={2}>
+                                <Grid container item xs direction="column" spacing={1}>
+                                    <Grid item xs>
                                         <Typography color="primary">Monday - Friday</Typography>
                                     </Grid>
-                                    <Grid
-                                        item
-                                        xs={12}
-                                        direction="row"
-                                        style={{ display: 'flex' }}
-                                        alignItems="center"
-                                        justify="space-between"
-                                    >
-                                        <KeyboardTimePicker
-                                            margin="dense"
-                                            InputProps={{
-                                                disableUnderline: true,
-                                                style: { borderRadius: 15, width: '160px' },
-                                            }}
-                                            inputProps={{
-                                                style: {
-                                                    paddingTop: '12px',
-                                                },
-                                            }}
-                                            InputAdornmentProps={{
-                                                style: {
-                                                    padding: 0,
-                                                },
-                                            }}
-                                            inputVariant="filled"
-                                            variant="inline"
-                                            id="weekday-start-time-picker"
-                                            value={officeHours.weekdayStart}
-                                            onChange={(date) =>
-                                                setOfficeHours({
-                                                    ...officeHours,
-                                                    weekdayStart: date?.toDate() ?? defaultOfficeHours.weekdayStart,
-                                                })
-                                            }
-                                        />
-                                        <Typography variant="body1" color="primary" display="inline">
-                                            to
-                                        </Typography>
-                                        <KeyboardTimePicker
-                                            margin="dense"
-                                            InputProps={{
-                                                disableUnderline: true,
-                                                style: { borderRadius: 15, width: '160px' },
-                                            }}
-                                            inputProps={{
-                                                style: {
-                                                    paddingTop: '12px',
-                                                    paddingBottom: '12px',
-                                                },
-                                            }}
-                                            InputAdornmentProps={{
-                                                style: {
-                                                    padding: 0,
-                                                },
-                                            }}
-                                            inputVariant="filled"
-                                            variant="inline"
-                                            id="weekday-end-time-picker"
-                                            value={officeHours.weekdayEnd}
-                                            onChange={(date) =>
-                                                setOfficeHours({
-                                                    ...officeHours,
-                                                    weekdayEnd: date?.toDate() ?? defaultOfficeHours.weekdayEnd,
-                                                })
-                                            }
-                                        />
-                                    </Grid>
-                                </Grid>
-                                {(doctorAvailability === DoctorAvailability.WeekdaysAndSat ||
-                                    doctorAvailability === DoctorAvailability.AllDays) && (
-                                    <Grid container xs={12} alignItems="center" style={{ marginBottom: 14 }}>
-                                        <Grid item xs={12}>
-                                            <Typography color="primary">Saturday</Typography>
-                                        </Grid>
-                                        <Grid
-                                            item
-                                            xs={12}
-                                            direction="row"
-                                            style={{ display: 'flex' }}
-                                            alignItems="center"
-                                            justify="space-between"
-                                        >
+                                    <Grid item container xs spacing={1} alignItems="center" justify="space-between">
+                                        <Grid item xs>
                                             <KeyboardTimePicker
-                                                margin="dense"
-                                                InputProps={{
-                                                    disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
-                                                }}
-                                                inputProps={{
-                                                    style: {
-                                                        paddingTop: '12px',
-                                                    },
-                                                }}
                                                 InputAdornmentProps={{
                                                     style: {
                                                         padding: 0,
@@ -696,104 +492,23 @@ export function ProfilePage(props: RouteComponentProps) {
                                                 }}
                                                 inputVariant="filled"
                                                 variant="inline"
-                                                id="saturday-start-time-picker"
-                                                value={officeHours.saturdayStart ?? officeHours.weekdayStart}
+                                                id="weekday-start-time-picker"
+                                                value={officeHours.weekdayStart}
                                                 onChange={(date) =>
                                                     setOfficeHours({
                                                         ...officeHours,
-                                                        saturdayStart: date?.toDate(),
+                                                        weekdayStart: date?.toDate() ?? defaultOfficeHours.weekdayStart,
                                                     })
                                                 }
                                             />
+                                        </Grid>
+                                        <Grid item>
                                             <Typography variant="body1" color="primary" display="inline">
                                                 to
                                             </Typography>
-                                            <KeyboardTimePicker
-                                                margin="dense"
-                                                InputProps={{
-                                                    disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
-                                                }}
-                                                inputProps={{
-                                                    style: {
-                                                        paddingTop: '12px',
-                                                        paddingBottom: '12px',
-                                                    },
-                                                }}
-                                                InputAdornmentProps={{
-                                                    style: {
-                                                        padding: 0,
-                                                    },
-                                                }}
-                                                inputVariant="filled"
-                                                variant="inline"
-                                                id="saturday-end-time-picker"
-                                                value={officeHours.saturdayEnd ?? officeHours.weekdayEnd}
-                                                onChange={(date) =>
-                                                    setOfficeHours({
-                                                        ...officeHours,
-                                                        saturdayEnd: date?.toDate(),
-                                                    })
-                                                }
-                                            />
                                         </Grid>
-                                    </Grid>
-                                )}
-                                {doctorAvailability === DoctorAvailability.AllDays && (
-                                    <Grid container xs={12} alignItems="center" style={{ marginBottom: 14 }}>
-                                        <Grid item xs={12}>
-                                            <Typography color="primary">Sunday</Typography>
-                                        </Grid>
-                                        <Grid
-                                            item
-                                            xs={12}
-                                            direction="row"
-                                            style={{ display: 'flex' }}
-                                            alignItems="center"
-                                            justify="space-between"
-                                        >
+                                        <Grid item xs>
                                             <KeyboardTimePicker
-                                                margin="dense"
-                                                InputProps={{
-                                                    disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
-                                                }}
-                                                inputProps={{
-                                                    style: {
-                                                        paddingTop: '12px',
-                                                    },
-                                                }}
-                                                InputAdornmentProps={{
-                                                    style: {
-                                                        padding: 0,
-                                                    },
-                                                }}
-                                                inputVariant="filled"
-                                                variant="inline"
-                                                id="sunday-start-time-picker"
-                                                value={officeHours.sundayStart ?? officeHours.weekdayStart}
-                                                onChange={(date) =>
-                                                    setOfficeHours({
-                                                        ...officeHours,
-                                                        sundayStart: date?.toDate(),
-                                                    })
-                                                }
-                                            />
-                                            <Typography variant="body1" color="primary" display="inline">
-                                                to
-                                            </Typography>
-                                            <KeyboardTimePicker
-                                                margin="dense"
-                                                InputProps={{
-                                                    disableUnderline: true,
-                                                    style: { borderRadius: 15, width: '160px' },
-                                                }}
-                                                inputProps={{
-                                                    style: {
-                                                        paddingTop: '12px',
-                                                        paddingBottom: '12px',
-                                                    },
-                                                }}
                                                 InputAdornmentProps={{
                                                     style: {
                                                         padding: 0,
@@ -802,14 +517,119 @@ export function ProfilePage(props: RouteComponentProps) {
                                                 inputVariant="filled"
                                                 variant="inline"
                                                 id="weekday-end-time-picker"
-                                                value={officeHours.sundayEnd ?? officeHours.weekdayEnd}
+                                                value={officeHours.weekdayEnd}
                                                 onChange={(date) =>
                                                     setOfficeHours({
                                                         ...officeHours,
-                                                        sundayEnd: date?.toDate(),
+                                                        weekdayEnd: date?.toDate() ?? defaultOfficeHours.weekdayEnd,
                                                     })
                                                 }
                                             />
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
+                                {(doctorAvailability === DoctorAvailability.WeekdaysAndSat ||
+                                    doctorAvailability === DoctorAvailability.AllDays) && (
+                                    <Grid item container xs direction="column" spacing={1}>
+                                        <Grid item xs>
+                                            <Typography color="primary">Saturday</Typography>
+                                        </Grid>
+                                        <Grid item container xs spacing={1} alignItems="center" justify="space-between">
+                                            <Grid item xs>
+                                                <KeyboardTimePicker
+                                                    InputAdornmentProps={{
+                                                        style: {
+                                                            padding: 0,
+                                                        },
+                                                    }}
+                                                    inputVariant="filled"
+                                                    variant="inline"
+                                                    id="saturday-start-time-picker"
+                                                    value={officeHours.saturdayStart ?? officeHours.weekdayStart}
+                                                    onChange={(date) =>
+                                                        setOfficeHours({
+                                                            ...officeHours,
+                                                            saturdayStart: date?.toDate(),
+                                                        })
+                                                    }
+                                                />
+                                            </Grid>
+                                            <Grid item>
+                                                <Typography variant="body1" color="primary" display="inline">
+                                                    to
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs>
+                                                <KeyboardTimePicker
+                                                    InputAdornmentProps={{
+                                                        style: {
+                                                            padding: 0,
+                                                        },
+                                                    }}
+                                                    inputVariant="filled"
+                                                    variant="inline"
+                                                    id="saturday-end-time-picker"
+                                                    value={officeHours.saturdayEnd ?? officeHours.weekdayEnd}
+                                                    onChange={(date) =>
+                                                        setOfficeHours({
+                                                            ...officeHours,
+                                                            saturdayEnd: date?.toDate(),
+                                                        })
+                                                    }
+                                                />
+                                            </Grid>
+                                        </Grid>
+                                    </Grid>
+                                )}
+                                {doctorAvailability === DoctorAvailability.AllDays && (
+                                    <Grid item container xs direction="column" spacing={1}>
+                                        <Grid item xs>
+                                            <Typography color="primary">Sunday</Typography>
+                                        </Grid>
+                                        <Grid item container xs spacing={1} alignItems="center" justify="space-between">
+                                            <Grid item xs>
+                                                <KeyboardTimePicker
+                                                    InputAdornmentProps={{
+                                                        style: {
+                                                            padding: 0,
+                                                        },
+                                                    }}
+                                                    inputVariant="filled"
+                                                    variant="inline"
+                                                    id="sunday-start-time-picker"
+                                                    value={officeHours.sundayStart ?? officeHours.weekdayStart}
+                                                    onChange={(date) =>
+                                                        setOfficeHours({
+                                                            ...officeHours,
+                                                            sundayStart: date?.toDate(),
+                                                        })
+                                                    }
+                                                />
+                                            </Grid>
+                                            <Grid item>
+                                                <Typography variant="body1" color="primary" display="inline">
+                                                    to
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs>
+                                                <KeyboardTimePicker
+                                                    InputAdornmentProps={{
+                                                        style: {
+                                                            padding: 0,
+                                                        },
+                                                    }}
+                                                    inputVariant="filled"
+                                                    variant="inline"
+                                                    id="weekday-end-time-picker"
+                                                    value={officeHours.sundayEnd ?? officeHours.weekdayEnd}
+                                                    onChange={(date) =>
+                                                        setOfficeHours({
+                                                            ...officeHours,
+                                                            sundayEnd: date?.toDate(),
+                                                        })
+                                                    }
+                                                />
+                                            </Grid>
                                         </Grid>
                                     </Grid>
                                 )}
@@ -818,13 +638,12 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Accordion>
                 </Grid>
             </Grid>
-            <Grid direction="row" container alignContent="center" alignItems="center">
-                <Grid item md={4} xs={12}>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
                     <p>Account options</p>
                 </Grid>
-                <Grid item md={8} xs={12} style={{ display: 'flex' }}>
+                <Grid item md={8} xs style={{ display: 'flex' }}>
                     <Button
-                        className={classes.accentButton}
                         color="default"
                         variant="contained"
                         disableElevation
@@ -833,11 +652,10 @@ export function ProfilePage(props: RouteComponentProps) {
                         }}
                         fullWidth
                     >
-                        <p>Cancel subscription</p>
+                        Cancel subscription
                     </Button>
                     <Box width="20px" />
                     <Button
-                        className={classes.accentButton}
                         color="default"
                         variant="contained"
                         disableElevation
@@ -846,11 +664,11 @@ export function ProfilePage(props: RouteComponentProps) {
                         }}
                         fullWidth
                     >
-                        <p>Delete account</p>
+                        Delete account
                     </Button>
                 </Grid>
             </Grid>
-        </>
+        </Grid>
     );
 
     const faq = tabIndex === 2 && (
@@ -887,7 +705,6 @@ export function ProfilePage(props: RouteComponentProps) {
                     <p>We are eager to help you.</p>
                     <Box width="20px" />
                     <Button
-                        className={classes.accentButton}
                         color="primary"
                         variant="contained"
                         disableElevation
@@ -895,15 +712,15 @@ export function ProfilePage(props: RouteComponentProps) {
                             // open live chat
                         }}
                     >
-                        <p>Open live chat</p>
+                        Open live chat
                     </Button>
                 </Box>
             </Box>
             <Grid container spacing={4}>
-                <Grid item xs={12} lg={7} xl={8}>
+                <Grid item xs lg={7} xl={8}>
                     <Box className="profile-header-container">
                         <Grid container>
-                            <Grid item lg={9} sm={12} direction="row" style={{ display: 'flex', alignItems: 'center' }}>
+                            <Grid item lg={9} sm={12} style={{ display: 'flex', alignItems: 'center' }}>
                                 <Avatar
                                     variant="rounded"
                                     style={{ height: '90px', width: '90px', borderRadius: '25px' }}
@@ -936,7 +753,7 @@ export function ProfilePage(props: RouteComponentProps) {
                         {faq}
                     </Box>
                 </Grid>
-                <Grid item xl={4} lg={5} xs={12}>
+                <Grid item xl={4} lg={5} xs>
                     <Box className="data-container" justifyContent="center">
                         <h2>Listing preview</h2>
                         <Box height="30px" />

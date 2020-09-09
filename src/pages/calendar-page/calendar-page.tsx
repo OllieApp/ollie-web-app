@@ -33,7 +33,6 @@ import interactionPlugin from '@fullcalendar/interaction'; // needed for dayClic
 import rrulePlugin from '@fullcalendar/rrule';
 import { RRule, Frequency } from 'rrule';
 import { CirclePicker } from 'react-color';
-import { useStyles } from '../../common/theming/theming';
 
 interface DoctorCalendarEvent {
     type: 'consultation' | 'video';
@@ -65,8 +64,6 @@ interface CalendarEvent {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function CalendarPage(props: RouteComponentProps) {
     const calendarRef = createRef<FullCalendar>();
-    const classes = useStyles();
-
     const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
 
     const handleClick = (event: EventClickArg) => {
@@ -252,20 +249,14 @@ export function CalendarPage(props: RouteComponentProps) {
     const recurrenceView = isRecurringEvent && (
         <Grid xs={6} item>
             <Box height="20px" />
-            <Grid container direction="column" item xs>
-                <Grid container alignItems="center">
-                    <p>Repeat every</p>
+            <Grid direction="column" spacing={2} container item xs>
+                <Grid alignItems="center" item container xs>
+                    <p style={{ minWidth: 120 }}>Repeat every</p>
                     <Box width="10px" />
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 15 },
-                        }}
                         inputProps={{
                             style: {
-                                padding: '12px 10px',
                                 width: '60px',
-                                textAlign: 'center',
                             },
                         }}
                         inputMode="numeric"
@@ -280,22 +271,6 @@ export function CalendarPage(props: RouteComponentProps) {
                     <Box width="10px" />
                     <FormControl>
                         <Select
-                            style={{
-                                borderRadius: 15,
-                            }}
-                            inputProps={{
-                                style: {
-                                    padding: '12px 10px',
-                                    textAlign: 'center',
-                                },
-                            }}
-                            SelectDisplayProps={{
-                                style: {
-                                    paddingTop: '12px',
-                                    textAlign: 'center',
-                                },
-                            }}
-                            disableUnderline
                             value={recurrenceFreq}
                             onChange={(event) =>
                                 setRecurrenceFreq(event.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly')
@@ -317,8 +292,7 @@ export function CalendarPage(props: RouteComponentProps) {
                     </FormControl>
                 </Grid>
                 {recurrenceFreq === 'weekly' && (
-                    <Grid>
-                        <Box height="10px" />
+                    <Grid item xs>
                         <p>Repeat on</p>
                         <ButtonGroup>
                             <Button
@@ -408,96 +382,103 @@ export function CalendarPage(props: RouteComponentProps) {
                         </ButtonGroup>
                     </Grid>
                 )}
-                <Box height="10px" />
-                <FormControl component="fieldset">
-                    <FormLabel component="legend">Ends</FormLabel>
-                    <RadioGroup
-                        aria-label="gender"
-                        name="gender1"
-                        value={recurrenceEnd.type}
-                        onChange={(event) =>
-                            setRecurrenceEnd({
-                                ...recurrenceEnd,
-                                type: (event.target as HTMLInputElement).value.toString() as
-                                    | 'never'
-                                    | 'on_date'
-                                    | 'after_ocurrence_count',
-                            })
-                        }
-                    >
-                        <FormControlLabel value="never" control={<Radio />} label="Never" />
-                        <Grid>
-                            <FormControlLabel value="on_date" control={<Radio />} label="On" />
-                            <KeyboardDatePicker
-                                disabled={recurrenceEnd.type !== 'on_date'}
-                                className="rounded-input"
-                                disableToolbar
-                                InputProps={{
-                                    disableUnderline: true,
-                                    style: { borderRadius: 15, width: '180px' },
-                                }}
-                                inputProps={{
-                                    style: {
-                                        padding: '10px 12px',
-                                    },
-                                }}
-                                inputVariant="filled"
-                                variant="inline"
-                                format="DD/MM/yyyy"
-                                margin="dense"
-                                id="end-recurrence-date-picker"
-                                value={recurrenceEnd.endDate}
-                                onChange={(date) =>
-                                    setRecurrenceEnd({
-                                        ...recurrenceEnd,
-                                        endDate: date?.toDate() ?? new Date(),
-                                    })
-                                }
-                                KeyboardButtonProps={{
-                                    'aria-label': 'change date',
-                                }}
-                                minDate={Date()}
-                            />
-                        </Grid>
-                        <Grid alignContent="center">
-                            <FormControlLabel value="after_ocurrence_count" control={<Radio />} label="After" />
-                            <TextField
-                                disabled={recurrenceEnd.type !== 'after_ocurrence_count'}
-                                InputProps={{
-                                    disableUnderline: true,
-                                    style: { borderRadius: 15 },
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            {recurrenceEnd.occurrenceCount && recurrenceEnd.occurrenceCount === 1
-                                                ? 'occurrence'
-                                                : 'occurrences'}
-                                        </InputAdornment>
-                                    ),
-                                }}
-                                inputProps={{
-                                    style: {
-                                        padding: '12px 10px',
-                                        width: '60px',
-                                        textAlign: 'center',
-                                    },
-                                }}
-                                inputMode="numeric"
-                                value={recurrenceEnd.occurrenceCount}
-                                onChange={(event) =>
-                                    setRecurrenceEnd({
-                                        ...recurrenceEnd,
-                                        occurrenceCount: Number(event.target.value),
-                                    })
-                                }
-                                variant="filled"
-                                autoFocus
-                                margin="none"
-                                id="repeat_count"
-                                type="number"
-                            />
-                        </Grid>
-                    </RadioGroup>
-                </FormControl>
+                <Grid item xs>
+                    <FormControl component="fieldset">
+                        <FormLabel component="legend">Ends</FormLabel>
+                        <RadioGroup
+                            aria-label="gender"
+                            name="gender1"
+                            value={recurrenceEnd.type}
+                            onChange={(event) =>
+                                setRecurrenceEnd({
+                                    ...recurrenceEnd,
+                                    type: (event.target as HTMLInputElement).value.toString() as
+                                        | 'never'
+                                        | 'on_date'
+                                        | 'after_ocurrence_count',
+                                })
+                            }
+                        >
+                            <Grid container direction="column" spacing={1}>
+                                <Grid item xs>
+                                    <FormControlLabel
+                                        value="never"
+                                        control={<Radio />}
+                                        style={{ minWidth: 120 }}
+                                        label="Never"
+                                    />
+                                </Grid>
+                                <Grid item xs>
+                                    <FormControlLabel
+                                        value="on_date"
+                                        control={<Radio />}
+                                        label="On"
+                                        style={{ minWidth: 120 }}
+                                    />
+                                    <KeyboardDatePicker
+                                        disabled={recurrenceEnd.type !== 'on_date'}
+                                        className="rounded-input"
+                                        disableToolbar
+                                        inputVariant="filled"
+                                        variant="inline"
+                                        format="DD/MM/yyyy"
+                                        id="end-recurrence-date-picker"
+                                        value={recurrenceEnd.endDate}
+                                        onChange={(date) =>
+                                            setRecurrenceEnd({
+                                                ...recurrenceEnd,
+                                                endDate: date?.toDate() ?? new Date(),
+                                            })
+                                        }
+                                        KeyboardButtonProps={{
+                                            'aria-label': 'change date',
+                                        }}
+                                        minDate={Date()}
+                                    />
+                                </Grid>
+                                <Grid alignContent="center" item xs container>
+                                    <FormControlLabel
+                                        value="after_ocurrence_count"
+                                        control={<Radio />}
+                                        label="After"
+                                        style={{ minWidth: 120 }}
+                                    />
+                                    <TextField
+                                        disabled={recurrenceEnd.type !== 'after_ocurrence_count'}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    {recurrenceEnd.occurrenceCount &&
+                                                    recurrenceEnd.occurrenceCount === 1
+                                                        ? 'occurrence'
+                                                        : 'occurrences'}
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        inputProps={{
+                                            style: {
+                                                width: '60px',
+                                            },
+                                        }}
+                                        inputMode="numeric"
+                                        value={recurrenceEnd.occurrenceCount}
+                                        onChange={(event) =>
+                                            setRecurrenceEnd({
+                                                ...recurrenceEnd,
+                                                occurrenceCount: Number(event.target.value),
+                                            })
+                                        }
+                                        variant="filled"
+                                        autoFocus
+                                        margin="none"
+                                        id="repeat_count"
+                                        type="number"
+                                    />
+                                </Grid>
+                            </Grid>
+                        </RadioGroup>
+                    </FormControl>
+                </Grid>
             </Grid>
         </Grid>
     );
@@ -516,13 +497,8 @@ export function CalendarPage(props: RouteComponentProps) {
                 <DialogTitle id="form-dialog-title">Create calendar event</DialogTitle>
                 <DialogContent style={{ overflowY: 'hidden' }}>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 15 },
-                        }}
                         variant="filled"
                         autoFocus
-                        margin="dense"
                         id="event_title"
                         label="Event title"
                         type="text"
@@ -536,10 +512,6 @@ export function CalendarPage(props: RouteComponentProps) {
                         label="Notes"
                         multiline
                         rows={4}
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 15 },
-                        }}
                         variant="filled"
                         fullWidth
                         value={notes}
@@ -780,14 +752,13 @@ export function CalendarPage(props: RouteComponentProps) {
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                     <h1>My bookings</h1>
                     <Button
-                        className={classes.accentButton}
                         color="primary"
                         startIcon={<Plus color="white" />}
                         variant="contained"
                         disableElevation
                         onClick={() => setCreateEventOpen(true)}
                     >
-                        <p>Create event</p>
+                        Create event
                     </Button>
                 </Box>
                 <Box marginTop="20px">
