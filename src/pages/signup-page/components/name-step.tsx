@@ -17,7 +17,7 @@ export function NameStep({ step }: StepViewProps) {
                         <TextField
                             {...firstNameField}
                             variant="filled"
-                            placeholder="Name"
+                            label="Name"
                             error={!!(firstNameMeta.touched && firstNameMeta.error)}
                             helperText={firstNameMeta.touched ? firstNameMeta.error : ''}
                             autoFocus
@@ -28,7 +28,7 @@ export function NameStep({ step }: StepViewProps) {
                         <TextField
                             {...lastNameField}
                             variant="filled"
-                            placeholder="Surname"
+                            label="Surname"
                             error={!!(lastNameMeta.touched && lastNameMeta.error)}
                             helperText={lastNameMeta.touched ? lastNameMeta.error : ''}
                             fullWidth
