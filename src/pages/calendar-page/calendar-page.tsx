@@ -497,13 +497,8 @@ export function CalendarPage(props: RouteComponentProps) {
                 <DialogTitle id="form-dialog-title">Create calendar event</DialogTitle>
                 <DialogContent style={{ overflowY: 'hidden' }}>
                     <TextField
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 15 },
-                        }}
                         variant="filled"
                         autoFocus
-                        margin="dense"
                         id="event_title"
                         label="Event title"
                         type="text"
@@ -517,12 +512,7 @@ export function CalendarPage(props: RouteComponentProps) {
                         label="Notes"
                         multiline
                         rows={4}
-                        InputProps={{
-                            disableUnderline: true,
-                            style: { borderRadius: 15 },
-                        }}
                         variant="filled"
-                        margin="dense"
                         fullWidth
                         value={notes}
                         onChange={(event) => setNotes(event.target.value)}
