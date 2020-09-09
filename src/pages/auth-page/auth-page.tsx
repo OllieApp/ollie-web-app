@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, RouteComponentProps } from '@reach/router';
 import { Box, makeStyles, Typography, Button, Grid } from '@material-ui/core';
 import logo from '../../logo.svg';
+import { useStore } from '../../common/stores';
 
 const useStyles = makeStyles({
     logo: {
@@ -10,9 +11,13 @@ const useStyles = makeStyles({
     },
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function AuthPage(props: RouteComponentProps) {
+export function AuthPage({ navigate }: RouteComponentProps) {
     const styles = useStyles();
+    const { userStore } = useStore();
+
+    useEffect(() => {
+        if (userStore.isAuthenticated && navigate) navigate('/');
+    }, [userStore.isAuthenticated, navigate]);
 
     return (
         <Box width={1} height="100vh" display="flex" alignItems="center" justifyContent="center" bgcolor="primary.main">

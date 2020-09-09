@@ -757,7 +757,7 @@ export function ProfilePage(props: RouteComponentProps) {
                 <Grid item xs={12} lg={7} xl={8}>
                     <Box className="profile-header-container">
                         <Grid container>
-                            <Grid item lg={9} sm={12} direction="row" style={{ display: 'flex', alignItems: 'center' }}>
+                            <Grid item lg={9} sm={12} style={{ display: 'flex', alignItems: 'center' }}>
                                 <Avatar
                                     variant="rounded"
                                     style={{ height: '90px', width: '90px', borderRadius: '25px' }}
