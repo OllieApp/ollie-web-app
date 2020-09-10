@@ -99,7 +99,7 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     });
 
     const currentStepConfig = useMemo(() => steps[currentStep], [currentStep]);
-    const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [steps, currentStep]);
+    const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [currentStep]);
     const hasPrevStep = useMemo(() => currentStep > 0, [currentStep]);
     const isLastStep = useMemo(() => currentStep === 4, [currentStep]);
     const StepView = useMemo(() => currentStepConfig.component, [currentStepConfig]);
