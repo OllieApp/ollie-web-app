@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import * as yup from 'yup';
 import { observer } from 'mobx-react';
-import { Box, Button, CircularProgress } from '@material-ui/core';
+import { Box, Button, CircularProgress, makeStyles } from '@material-ui/core';
 import { RouteComponentProps } from '@reach/router';
 import { FormikProvider, Form, useFormik } from 'formik';
 import { CategoryStep } from './components/category-step';
@@ -65,8 +65,15 @@ const validationSchema = yup.object().shape<User>({
     gender: yup.string().oneOf(['male', 'female', 'prefer not to say']).required(),
 });
 
+const useStyles = makeStyles({
+    progressBar: {
+        transition: 'width .2s ease-in-out',
+    },
+});
+
 export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     const { userStore } = useStore();
+    const styles = useStyles();
 
     useEffect(() => {
         if (userStore.isAuthenticated && navigate) navigate('/');
@@ -92,6 +99,7 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     });
 
     const currentStepConfig = useMemo(() => steps[currentStep], [currentStep]);
+    const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [steps, currentStep]);
     const hasPrevStep = useMemo(() => currentStep > 0, [currentStep]);
     const isLastStep = useMemo(() => currentStep === 4, [currentStep]);
     const StepView = useMemo(() => currentStepConfig.component, [currentStepConfig]);
@@ -135,7 +143,17 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
                     justifyContent="center"
                     bgcolor="primary.main"
                 >
-                    <Box width="480px" bgcolor="gray.bg" borderRadius={40} p={5}>
+                    <Box width="480px" bgcolor="gray.bg" borderRadius={40} p={5} overflow="hidden" position="relative">
+                        <Box
+                            className={styles.progressBar}
+                            height="15px"
+                            position="absolute"
+                            left={0}
+                            top={0}
+                            bgcolor="secondary.main"
+                            width={`${completedPercent}%`}
+                        />
+
                         <StepView step={currentStep} />
 
                         <Box display="flex" alignItems="center" justifyContent="flex-end">
