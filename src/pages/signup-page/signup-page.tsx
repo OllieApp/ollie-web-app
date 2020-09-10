@@ -10,7 +10,7 @@ import { GenderStep } from './components/gender-step';
 import { StepConfig } from './types';
 import { EmailStep } from './components/email-step';
 import { PasswordStep } from './components/password-step';
-import { useStore } from '../../common/stores';
+import { useRootStore } from '../../common/stores';
 import { User } from '../../types';
 
 const steps = [
@@ -72,7 +72,7 @@ const useStyles = makeStyles({
 });
 
 export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
-    const { userStore } = useStore();
+    const { userStore } = useRootStore();
     const styles = useStyles();
 
     useEffect(() => {

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Link, RouteComponentProps } from '@reach/router';
 import { Box, makeStyles, Typography, Button, Grid } from '@material-ui/core';
 import logo from '../../logo.svg';
-import { useStore } from '../../common/stores';
+import { useRootStore } from '../../common/stores';
 
 const useStyles = makeStyles({
     logo: {
@@ -13,7 +13,7 @@ const useStyles = makeStyles({
 
 export function AuthPage({ navigate }: RouteComponentProps) {
     const styles = useStyles();
-    const { userStore } = useStore();
+    const { userStore } = useRootStore();
 
     useEffect(() => {
         if (userStore.isAuthenticated && navigate) navigate('/');

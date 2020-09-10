@@ -5,7 +5,7 @@ import { Box, makeStyles, Typography, Button, Grid, TextField, CircularProgress 
 import { useFormik } from 'formik';
 import { observer } from 'mobx-react';
 import logo from '../../logo.svg';
-import { useStore } from '../../common/stores';
+import { useRootStore } from '../../common/stores';
 
 const useStyles = makeStyles({
     logo: {
@@ -20,7 +20,7 @@ const validationSchema = yup.object().shape<{ email: string; password: string }>
 });
 
 export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
-    const { userStore } = useStore();
+    const { userStore } = useRootStore();
 
     useEffect(() => {
         if (userStore.isAuthenticated && navigate) navigate('/');

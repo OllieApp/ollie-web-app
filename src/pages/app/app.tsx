@@ -15,11 +15,11 @@ import { SideBarHeader } from '../../components/side-nav-bar/side-bar-header/sid
 import { ReactComponent as Logo } from '../../images/ollie_ears_w_text.svg';
 import { theme } from '../../common/theming/theming';
 import './app.scss';
-import { useStore } from '../../common/stores';
+import { useRootStore } from '../../common/stores';
 import { routes, getCurrentRouteConfig } from './routes';
 
 const Shell = observer(() => {
-    const { userStore } = useStore();
+    const { userStore } = useRootStore();
     const navigate = useNavigate();
     const location = useLocation();
     const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);

@@ -34,7 +34,7 @@ import rrulePlugin from '@fullcalendar/rrule';
 import { RRule, Frequency } from 'rrule';
 import { CirclePicker } from 'react-color';
 import { firestore } from '../../common/firebase/firebase-wrapper';
-import { useStore } from '../../common/stores/index';
+import { useRootStore } from '../../common/stores/index';
 
 interface DoctorCalendarEvent {
     type: 'consultation' | 'video';
@@ -112,7 +112,7 @@ export function CalendarPage(props: RouteComponentProps) {
         { id: '231233', title: 'Bob Martini', start: '2020-08-18T08:00:00+02:00', end: '2020-08-18T09:00:00+02:00' },
     ]);
     const [eventColor, setEventColor] = useState<string | null>('');
-    const { userStore } = useStore();
+    const { userStore } = useRootStore();
 
     const businessHours = [
         {
