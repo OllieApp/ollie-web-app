@@ -21,19 +21,15 @@ export default class UserStore {
         });
     }
 
-    @action async loginWithEmail({
-        email,
-        password,
-    }: {
-        email: string;
-        password: string;
-    }): Promise<firebase.auth.UserCredential | undefined> {
-        return auth().signInWithEmailAndPassword(email, password);
+    @action async loginWithEmail({ email, password }: { email: string; password: string }): Promise<void> {
+        await auth().signInWithEmailAndPassword(email, password);
     }
 
-    @action async signUpWithEmail({ email, password, firstName, lastName, gender, category }: User) {
-        await auth().createUserWithEmailAndPassword(email, password);
-        await firestore().collection('users').doc(email).set({
+    @action async signUpWithEmail({ email, password, firstName, lastName, gender, category }: User): Promise<void> {
+        const { user } = await auth().createUserWithEmailAndPassword(email, password);
+        if (!user) throw new Error('Error creating user with email.');
+
+        await firestore().collection('users').doc(user.uid).set({
             firstName,
             lastName,
             email,
@@ -42,7 +38,7 @@ export default class UserStore {
         });
     }
 
-    @action async logout() {
-        return auth().signOut();
+    @action async logout(): Promise<void> {
+        await auth().signOut();
     }
 }
