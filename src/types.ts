@@ -5,4 +5,5 @@ export interface User {
     password: string;
     category: string;
     gender: string;
+    active?: boolean;
 }
