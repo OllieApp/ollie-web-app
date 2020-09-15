@@ -35,7 +35,7 @@ export const theme = createMuiTheme({
         h1: {
             fontSize: 40,
             letterSpacing: 0,
-            lineHeight: 1.6,
+            lineHeight: 1.2,
             fontWeight: 900,
         },
         h2: {

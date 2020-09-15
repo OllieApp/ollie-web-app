@@ -1,22 +1,24 @@
 import React from 'react';
 import { Box, TextField } from '@material-ui/core';
+import { useField } from 'formik';
 import { StepViewProps } from '../types';
 import { StepHeader } from './step-header';
 
-export function EmailStep({ values, errors, step, onChange, onBlur }: StepViewProps) {
+export function EmailStep({ step }: StepViewProps) {
+    const [field, meta] = useField({ name: 'email' });
+
     return (
         <Box pt={4} pb={6}>
             <StepHeader step={step + 1} title="What's your email address?" />
             <Box mt={3}>
                 <TextField
-                    name="email"
+                    {...field}
                     variant="filled"
                     type="email"
                     placeholder="name@example.com"
-                    value={values.email}
-                    error={!!errors.email}
-                    onChange={onChange}
-                    onBlur={onBlur}
+                    error={!!(meta.touched && meta.error)}
+                    helperText={meta.touched ? meta.error : ''}
+                    autoFocus
                     fullWidth
                 />
             </Box>
