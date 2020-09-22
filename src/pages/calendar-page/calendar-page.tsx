@@ -1,6 +1,6 @@
+/* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { useState, useEffect, createRef } from 'react';
-import { RouteComponentProps } from '@reach/router';
-import Container from '@material-ui/core/Container';
+import { RouteComponentProps, Link } from '@reach/router';
 import FullCalendar, { EventClickArg } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -12,8 +12,10 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Container,
     TextField,
     Grid,
+    Paper,
     FormControlLabel,
     Switch,
     FormLabel,
@@ -25,16 +27,19 @@ import {
     Radio,
     InputAdornment,
     ButtonGroup,
+    Typography,
 } from '@material-ui/core';
-import { Plus, User, Video } from 'react-feather';
+import { Plus, Video, User as UserIcon } from 'react-feather';
 import { KeyboardTimePicker, KeyboardDatePicker } from '@material-ui/pickers';
 import moment from 'moment';
 import interactionPlugin from '@fullcalendar/interaction'; // needed for dayClick
 import rrulePlugin from '@fullcalendar/rrule';
 import { RRule, Frequency } from 'rrule';
 import { CirclePicker } from 'react-color';
+import { observer } from 'mobx-react';
 import { firestore } from '../../common/firebase/firebase-wrapper';
 import { useRootStore } from '../../common/stores/index';
+import { User } from '../../types';
 
 interface DoctorCalendarEvent {
     type: 'consultation' | 'video';
@@ -66,8 +71,46 @@ interface CalendarEvent {
         eventType?: 'consultation' | 'video';
     };
 }
+
+function SetupModal({ userInfo }: { userInfo: User }) {
+    return (
+        <Paper elevation={24}>
+            <Box width="480px" bgcolor="white" borderRadius={40} p={5}>
+                <Box display="flex" flexDirection="column">
+                    <Box pt={5} mb={2}>
+                        <Typography variant="h2">Hey Dr {userInfo.lastName}</Typography>
+                    </Box>
+                    <Typography variant="h4">
+                        We'll need to grab some details so that we can list your profile & increase your appointments!
+                    </Typography>
+                    <Box width="100%" mt={6}>
+                        <Grid container spacing={3} justify="flex-end">
+                            <Grid item>
+                                <Box display="flex" justifyContent="flex-end">
+                                    <Link to="#">
+                                        <Button variant="text" color="primary">
+                                            later
+                                        </Button>
+                                    </Link>
+                                </Box>
+                            </Grid>
+                            <Grid item>
+                                <Link to="#">
+                                    <Button type="submit" variant="contained" color="primary" fullWidth>
+                                        set up in 2min
+                                    </Button>
+                                </Link>
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </Box>
+            </Box>
+        </Paper>
+    );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function CalendarPage(props: RouteComponentProps) {
+export const CalendarPage = observer((props: RouteComponentProps) => {
     const calendarRef = createRef<FullCalendar>();
     const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
 
@@ -113,6 +156,7 @@ export function CalendarPage(props: RouteComponentProps) {
     ]);
     const [eventColor, setEventColor] = useState<string | null>('');
     const { userStore } = useRootStore();
+    const { userInfo, isActive: isUserActive } = userStore;
 
     const businessHours = [
         {
@@ -128,9 +172,13 @@ export function CalendarPage(props: RouteComponentProps) {
     ];
 
     useEffect(() => {
+        if (!userStore.user) return;
+
+        userStore.fetchUserInfo();
+
         const unsubscribe = firestore()
             .collection('appointments')
-            .where('doctor_id', '==', userStore.user?.uid)
+            .where('doctor_id', '==', userStore.user.uid)
             .onSnapshot((snap) => {
                 const data: CalendarEvent[] = snap.docs.map((doc) => ({
                     title: doc.get('user_name'),
@@ -778,6 +826,7 @@ export function CalendarPage(props: RouteComponentProps) {
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                     <h1>My bookings</h1>
                     <Button
+                        disabled={!isUserActive}
                         color="primary"
                         startIcon={<Plus color="white" />}
                         variant="contained"
@@ -787,104 +836,112 @@ export function CalendarPage(props: RouteComponentProps) {
                         Create event
                     </Button>
                 </Box>
-                <Box marginTop="20px">
-                    <FullCalendar
-                        ref={calendarRef}
-                        headerToolbar={{
-                            left: 'prev,next today',
-                            center: 'title',
-                            right: 'dayGridMonth,timeGridWeek,timeGridDay',
-                        }}
-                        height="70vh"
-                        viewClassNames="calendar-view"
-                        eventBackgroundColor="#B3E0D0"
-                        eventBorderColor="#B3E0D0"
-                        eventTextColor="#20352E"
-                        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, rrulePlugin]}
-                        initialView="timeGridWeek"
-                        events={events}
-                        slotLabelFormat={{ hour: '2-digit', minute: '2-digit' }}
-                        slotDuration="00:15:00"
-                        slotLabelInterval="01:00:00"
-                        snapDuration="00:15:00"
-                        dayHeaderContent={(args) => {
-                            const date = moment(args.date);
-                            if (args.view.type !== 'timeGridWeek') return undefined;
-                            return (
-                                <div className="calendar-day-container">
-                                    <div
-                                        className="calendar-day-number"
-                                        style={{
-                                            color: args.isToday ? 'white' : '#2D6455',
-                                            backgroundColor: args.isToday ? '#2D6455' : 'transparent',
-                                        }}
-                                    >
-                                        {date.format('DD')}
+                {isUserActive ? (
+                    <Box marginTop="20px">
+                        <FullCalendar
+                            ref={calendarRef}
+                            headerToolbar={{
+                                left: 'prev,next today',
+                                center: 'title',
+                                right: 'dayGridMonth,timeGridWeek,timeGridDay',
+                            }}
+                            height="70vh"
+                            viewClassNames="calendar-view"
+                            eventBackgroundColor="#B3E0D0"
+                            eventBorderColor="#B3E0D0"
+                            eventTextColor="#20352E"
+                            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, rrulePlugin]}
+                            initialView="timeGridWeek"
+                            events={events}
+                            slotLabelFormat={{ hour: '2-digit', minute: '2-digit' }}
+                            slotDuration="00:15:00"
+                            slotLabelInterval="01:00:00"
+                            snapDuration="00:15:00"
+                            dayHeaderContent={(args) => {
+                                const date = moment(args.date);
+                                if (args.view.type !== 'timeGridWeek') return undefined;
+                                return (
+                                    <div className="calendar-day-container">
+                                        <div
+                                            className="calendar-day-number"
+                                            style={{
+                                                color: args.isToday ? 'white' : '#2D6455',
+                                                backgroundColor: args.isToday ? '#2D6455' : 'transparent',
+                                            }}
+                                        >
+                                            {date.format('DD')}
+                                        </div>
+                                        {date.format('ddd')}
                                     </div>
-                                    {date.format('ddd')}
-                                </div>
-                            );
-                        }}
-                        select={(info) => {
-                            setStartDate(info.start);
-                            setEndDate(info.end);
-                            setAllDayEvent(info.allDay);
-                            setCreateEventOpen(true);
-                        }}
-                        eventContent={(args) => {
-                            // const startDate = args.event.start;
-                            // const endDate = args.event.end;
-                            // const padTime = (value: number | undefined) => (value ?? '').toString().padStart(2, '0');
-                            if (args.event.allDay) return undefined;
-                            return (
-                                <div style={{ overflow: 'hidden', height: 'inherit' }}>
-                                    <div>{args.timeText}</div>
-                                    <div>
-                                        <span>
-                                            {args.event.extendedProps.eventType === 'consultation' ? (
-                                                <User size="14" />
-                                            ) : (
-                                                <Video size="14" />
-                                            )}
-                                        </span>
-                                        {` ${args.event.title}`}
+                                );
+                            }}
+                            select={(info) => {
+                                setStartDate(info.start);
+                                setEndDate(info.end);
+                                setAllDayEvent(info.allDay);
+                                setCreateEventOpen(true);
+                            }}
+                            eventContent={(args) => {
+                                // const startDate = args.event.start;
+                                // const endDate = args.event.end;
+                                // const padTime = (value: number | undefined) => (value ?? '').toString().padStart(2, '0');
+                                if (args.event.allDay) return undefined;
+                                return (
+                                    <div style={{ overflow: 'hidden', height: 'inherit' }}>
+                                        <div>{args.timeText}</div>
+                                        <div>
+                                            <span>
+                                                {args.event.extendedProps.eventType === 'consultation' ? (
+                                                    <UserIcon size="14" />
+                                                ) : (
+                                                    <Video size="14" />
+                                                )}
+                                            </span>
+                                            {` ${args.event.title}`}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        }}
-                        eventTimeFormat={{
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            meridiem: 'short',
-                        }}
-                        businessHours={businessHours.filter((x) => x.daysOfWeek)}
-                        eventClick={(args) => {
-                            handleClick(args);
-                        }}
-                        selectAllow={(selectInfo) => {
-                            const currentDate = new Date();
-                            if (selectInfo.start > currentDate) {
-                                return true;
-                            }
-                            if (
-                                selectInfo.allDay &&
-                                selectInfo.start.getFullYear() === currentDate.getFullYear() &&
-                                selectInfo.start.getDay() === currentDate.getDay() &&
-                                selectInfo.start.getMonth() === currentDate.getMonth()
-                            ) {
-                                return true;
-                            }
-                            return false;
-                        }}
-                        slotMinTime={slotMinTime}
-                        slotMaxTime={slotMaxTime}
-                        eventConstraint={businessHours}
-                        weekNumbers
-                        selectable
-                    />
-                </Box>
+                                );
+                            }}
+                            eventTimeFormat={{
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                meridiem: 'short',
+                            }}
+                            businessHours={businessHours.filter((x) => x.daysOfWeek)}
+                            eventClick={(args) => {
+                                handleClick(args);
+                            }}
+                            selectAllow={(selectInfo) => {
+                                const currentDate = new Date();
+                                if (selectInfo.start > currentDate) {
+                                    return true;
+                                }
+                                if (
+                                    selectInfo.allDay &&
+                                    selectInfo.start.getFullYear() === currentDate.getFullYear() &&
+                                    selectInfo.start.getDay() === currentDate.getDay() &&
+                                    selectInfo.start.getMonth() === currentDate.getMonth()
+                                ) {
+                                    return true;
+                                }
+                                return false;
+                            }}
+                            slotMinTime={slotMinTime}
+                            slotMaxTime={slotMaxTime}
+                            eventConstraint={businessHours}
+                            weekNumbers
+                            selectable
+                        />
+                    </Box>
+                ) : (
+                    userInfo && (
+                        <Box display="flex" flex={1} justifyContent="center" py={10}>
+                            <SetupModal userInfo={userInfo} />
+                        </Box>
+                    )
+                )}
             </Container>
             {createEventModal}
         </>
     );
-}
+});
