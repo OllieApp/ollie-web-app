@@ -11,7 +11,7 @@ import { StepConfig } from './types';
 import { EmailStep } from './components/email-step';
 import { PasswordStep } from './components/password-step';
 import { useRootStore } from '../../common/stores';
-import { User } from '../../types';
+import { AuthUser } from '../../types';
 
 const steps = [
     {
@@ -41,7 +41,7 @@ const steps = [
     },
 ] as StepConfig[];
 
-const initialValues: User = {
+const initialValues: AuthUser = {
     firstName: '',
     lastName: '',
     email: '',
@@ -50,7 +50,7 @@ const initialValues: User = {
     gender: '',
 };
 
-const validationSchema = yup.object().shape<User>({
+const validationSchema = yup.object().shape<AuthUser>({
     firstName: yup.string().required('first name is a required field'),
     lastName: yup.string().required('last name is a required field'),
     email: yup.string().email().required(),
@@ -80,7 +80,7 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     }, [userStore.isAuthenticated, navigate]);
 
     const [currentStep, setCurrentStep] = useState<number>(0);
-    const form = useFormik<User>({
+    const form = useFormik<AuthUser>({
         initialValues,
         validationSchema,
         onSubmit: async (userData) => {
@@ -105,14 +105,14 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     const StepView = useMemo(() => currentStepConfig.component, [currentStepConfig]);
 
     const isCurrentStepValid = useMemo(
-        () => currentStepConfig.fields.every((field) => !form.errors[field as keyof User]),
+        () => currentStepConfig.fields.every((field) => !form.errors[field as keyof AuthUser]),
         [currentStepConfig, form.errors],
     );
 
     const validateCurrentStepFields = useCallback(
         () =>
             currentStepConfig.fields.forEach(async (field) => {
-                await form.validateField(field as keyof User);
+                await form.validateField(field as keyof AuthUser);
                 form.setFieldTouched(field);
             }),
         [currentStepConfig, form],
