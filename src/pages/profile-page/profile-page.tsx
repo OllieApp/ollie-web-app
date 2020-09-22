@@ -5,9 +5,11 @@ import {
     Grid,
     Box,
     Button,
+    IconButton,
     Avatar,
     Tab,
     Tabs,
+    Modal,
     withStyles,
     Theme,
     createStyles,
@@ -22,10 +24,11 @@ import {
     FormControlLabel,
     Checkbox,
 } from '@material-ui/core';
-import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calendar } from 'react-feather';
+import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calendar, Edit } from 'react-feather';
 import { KeyboardTimePicker } from '@material-ui/pickers';
 import moment from 'moment';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
+import { useTheme } from '@material-ui/core/styles';
 import { mapStyles } from '../../common/theming/map-styles';
 import bonitas from '../../images/bonitas.jpg';
 import discovery from '../../images/discovery.png';
@@ -75,6 +78,7 @@ export function ProfilePage(props: RouteComponentProps) {
     const [bio, setBio] = useState('');
     const [address, setAddress] = useState('');
     const [appointmentSlot, setAppointmentSlot] = useState(15);
+    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
     const { isLoaded } = useLoadScript({ googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY });
     const pinMapOptions: google.maps.MapOptions = {
         styles: mapStyles,
@@ -98,6 +102,12 @@ export function ProfilePage(props: RouteComponentProps) {
     }, []);
     const [medicalAids, setMedicalAids] = useState<MedicalAid[]>([]);
     const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
+    const theme = useTheme();
+
+    const toggleAvatarModal = useCallback(() => {
+        setIsAvatarModalOpen(!isAvatarModalOpen);
+    }, [isAvatarModalOpen]);
+
     const doctorInfoView = tabIndex === 0 && (
         <Grid direction="column" spacing={1} container>
             <Grid item container alignContent="center" alignItems="center">
@@ -231,6 +241,7 @@ export function ProfilePage(props: RouteComponentProps) {
             </Grid>
         </Grid>
     );
+
     const settings = tabIndex === 1 && (
         <Grid direction="column" spacing={1} container>
             <Grid item container alignContent="center" alignItems="center">
@@ -697,6 +708,7 @@ export function ProfilePage(props: RouteComponentProps) {
             </Accordion>
         </>
     );
+
     return (
         <Container className="profile-page-container" maxWidth="xl">
             <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -721,10 +733,26 @@ export function ProfilePage(props: RouteComponentProps) {
                     <Box className="profile-header-container">
                         <Grid container>
                             <Grid item lg={9} sm={12} style={{ display: 'flex', alignItems: 'center' }}>
-                                <Avatar
-                                    variant="rounded"
-                                    style={{ height: '90px', width: '90px', borderRadius: '25px' }}
-                                />
+                                <Box width="90px" height="90px" position="relative">
+                                    <Avatar
+                                        variant="rounded"
+                                        style={{ height: '100%', width: '100%', borderRadius: '25px' }}
+                                    />
+                                    <AvatarOverlay
+                                        width="100%"
+                                        height="100%"
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                        position="absolute"
+                                        top={0}
+                                        left={0}
+                                    >
+                                        <AvatarEditIconButton onClick={toggleAvatarModal}>
+                                            <Edit color={theme.palette.primary.main} size={18} />
+                                        </AvatarEditIconButton>
+                                    </AvatarOverlay>
+                                </Box>
                                 <Box marginLeft="20px" display="flex" flexDirection="column">
                                     <Typography variant="h4" style={{ fontWeight: 'bold' }} color="primary">
                                         Dr A General
@@ -877,6 +905,34 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Box>
                 </Grid>
             </Grid>
+
+            <Modal open={isAvatarModalOpen} onBackdropClick={toggleAvatarModal} disableEnforceFocus>
+                <Box width="100%" height="100%" display="flex" alignItems="center" justifyContent="center">
+                    <Box
+                        p={4}
+                        width="100%"
+                        maxWidth="640px"
+                        height="100%"
+                        maxHeight="420px"
+                        bgcolor="background.paper"
+                        borderRadius={30}
+                    >
+                        <Box display="flex" alignItems="center">
+                            <Box>
+                                <Typography variant="h3">Change Listing Photo</Typography>
+                                <Typography variant="body2">
+                                    This profile photo will be displayed to patients on the app.
+                                </Typography>
+                            </Box>
+                            <Box marginLeft="auto">
+                                <Button variant="contained" color="primary">
+                                    Add picture
+                                </Button>
+                            </Box>
+                        </Box>
+                    </Box>
+                </Box>
+            </Modal>
         </Container>
     );
 }
@@ -919,3 +975,30 @@ const StyledTab = withStyles((theme: Theme) =>
         },
     }),
 )((props: StyledTabProps) => <Tab disableRipple {...props} />);
+
+const AvatarEditIconButton = withStyles((theme: Theme) => ({
+    root: {
+        boxShadow: 'none',
+        backgroundColor: theme.palette.background.paper,
+        '&:hover': {
+            backgroundColor: theme.palette.grey[100],
+            boxShadow: 'none',
+        },
+        '&:active': {
+            boxShadow: 'none',
+        },
+        '&:focus': {
+            boxShadow: 'none',
+        },
+    },
+}))(IconButton);
+
+const AvatarOverlay = withStyles({
+    root: {
+        opacity: 0,
+        transition: 'opacity .2s ease-in-out',
+        '&:hover': {
+            opacity: 1,
+        },
+    },
+})(Box);
