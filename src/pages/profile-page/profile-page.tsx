@@ -26,10 +26,11 @@ import {
 } from '@material-ui/core';
 import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calendar, Edit } from 'react-feather';
 import { KeyboardTimePicker } from '@material-ui/pickers';
-import moment from 'moment';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
 import { useTheme } from '@material-ui/core/styles';
+import moment from 'moment';
 import { mapStyles } from '../../common/theming/map-styles';
+import { AvatarUpload } from './components/avatar-upload';
 import bonitas from '../../images/bonitas.jpg';
 import discovery from '../../images/discovery.png';
 import medshield from '../../images/medshield.png';
@@ -107,6 +108,11 @@ export function ProfilePage(props: RouteComponentProps) {
     const toggleAvatarModal = useCallback(() => {
         setIsAvatarModalOpen(!isAvatarModalOpen);
     }, [isAvatarModalOpen]);
+
+    const handleAvatarSave = useCallback((image: string) => {
+        // eslint-disable-next-line no-console
+        console.log('TODO: Upload image', image);
+    }, []);
 
     const doctorInfoView = tabIndex === 0 && (
         <Grid direction="column" spacing={1} container>
@@ -905,31 +911,18 @@ export function ProfilePage(props: RouteComponentProps) {
                     </Box>
                 </Grid>
             </Grid>
-
-            <Modal open={isAvatarModalOpen} onBackdropClick={toggleAvatarModal} disableEnforceFocus>
+            <Modal open={isAvatarModalOpen} onClose={toggleAvatarModal}>
                 <Box width="100%" height="100%" display="flex" alignItems="center" justifyContent="center">
                     <Box
-                        p={4}
+                        px={4}
+                        pt={4}
+                        pb={2}
                         width="100%"
                         maxWidth="640px"
-                        height="100%"
-                        maxHeight="420px"
                         bgcolor="background.paper"
                         borderRadius={30}
                     >
-                        <Box display="flex" alignItems="center">
-                            <Box>
-                                <Typography variant="h3">Change Listing Photo</Typography>
-                                <Typography variant="body2">
-                                    This profile photo will be displayed to patients on the app.
-                                </Typography>
-                            </Box>
-                            <Box marginLeft="auto">
-                                <Button variant="contained" color="primary">
-                                    Add picture
-                                </Button>
-                            </Box>
-                        </Box>
+                        <AvatarUpload onSave={handleAvatarSave} onCancel={toggleAvatarModal} />
                     </Box>
                 </Box>
             </Modal>
