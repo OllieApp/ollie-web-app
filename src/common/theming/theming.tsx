@@ -64,25 +64,30 @@ export const theme = createMuiTheme({
         h1: {
             fontSize: 40,
             letterSpacing: 0,
-            lineHeight: 1.2,
+            lineHeight: 1.5,
             fontWeight: 900,
         },
         h2: {
             fontSize: 35,
             letterSpacing: 0,
-            lineHeight: 1.2,
+            lineHeight: 1.5,
             fontWeight: 900,
         },
         h3: {
             fontSize: 25,
             letterSpacing: 0,
-            lineHeight: 1.2,
+            lineHeight: 1.5,
             fontWeight: 900,
         },
         h4: {
             fontSize: 22,
             letterSpacing: 0,
-            lineHeight: 1.2,
+            lineHeight: 1.5,
+        },
+        h5: {
+            fontSize: 18,
+            letterSpacing: 0,
+            lineHeight: 1.5,
         },
         overline: {
             fontSize: 20,
