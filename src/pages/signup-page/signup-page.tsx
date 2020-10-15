@@ -90,7 +90,11 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
                 form.setSubmitting(false);
                 if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
             } catch (ex) {
+                await userStore.logout();
                 form.setSubmitting(false);
+
+                if (navigate) navigate('/signup', {});
+
                 // eslint-disable-next-line no-alert
                 alert(ex.message);
                 // TODO: Report
