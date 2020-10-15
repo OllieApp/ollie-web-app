@@ -80,7 +80,7 @@ export function ProfilePage(props: RouteComponentProps) {
     const [address, setAddress] = useState('');
     const [appointmentSlot, setAppointmentSlot] = useState(15);
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-    const { isLoaded } = useLoadScript({ googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY });
+    const { isLoaded } = useLoadScript({ googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY as string });
     const pinMapOptions: google.maps.MapOptions = {
         styles: mapStyles,
         disableDefaultUI: true,
