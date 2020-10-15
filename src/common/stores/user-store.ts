@@ -3,6 +3,7 @@ import firebase from 'firebase';
 import { auth, firestore } from '../firebase/firebase-wrapper';
 import { RootStore } from './root-store';
 import { User, AuthUser } from '../../types';
+import { OllieAPI } from '../api';
 
 export default class UserStore {
     rootStore: RootStore;
@@ -36,14 +37,24 @@ export default class UserStore {
         const { user } = await auth().createUserWithEmailAndPassword(email, password);
         if (!user) throw new Error('Error creating user with email.');
 
-        await firestore().collection('users').doc(user.uid).set({
+        const payload = {
             firstName,
             lastName,
             email,
             gender,
             category,
-            active: false,
-        });
+        };
+
+        await OllieAPI.post('/practitioners', payload);
+
+        // await firestore().collection('users').doc(user.uid).set({
+        //     firstName,
+        //     lastName,
+        //     email,
+        //     gender,
+        //     category,
+        //     active: false,
+        // });
     }
 
     @action async logout(): Promise<void> {
