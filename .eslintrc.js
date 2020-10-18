@@ -26,6 +26,7 @@ module.exports = {
         // Place to specify ESLint rules. Can be used to overwrite rules specified from the extended configs
         '@typescript-eslint/explicit-function-return-type': 0,
         '@typescript-eslint/no-use-before-define': 0,
+        '@typescript-eslint/no-non-null-assertion': 0,
         'import/prefer-default-export': 0,
         'import/no-cycle': 0,
         'default-case': 0,

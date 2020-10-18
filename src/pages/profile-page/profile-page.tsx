@@ -29,6 +29,7 @@ import { KeyboardTimePicker } from '@material-ui/pickers';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
 import { useTheme } from '@material-ui/core/styles';
 import moment from 'moment';
+import { observer } from 'mobx-react';
 import { mapStyles } from '../../common/theming/map-styles';
 import { AvatarUpload } from './components/avatar-upload';
 import bonitas from '../../images/bonitas.jpg';
@@ -36,25 +37,11 @@ import discovery from '../../images/discovery.png';
 import medshield from '../../images/medshield.png';
 import momentum from '../../images/momentum.png';
 import './profile-page.scss';
+import { DoctorCategory, DoctorAvailability, MedicalAid, Location } from '../../types';
+import { DoctorCategories, MedicalAids } from '../../constants';
+import { useRootStore } from '../../common/stores';
 
-enum DoctorSpeciality {
-    Unknown,
-    GP = 1,
-    Physiotherapist,
-    Psychologist,
-}
-enum DoctorAvailability {
-    Weekdays,
-    WeekdaysAndSat,
-    AllDays,
-}
-enum MedicalAid {
-    Discovery,
-    Momentum,
-    Medshield,
-    Bonitas,
-    Fedhealth,
-}
+const defaultLocation = { lat: -28.4792625, lng: 24.6727135 };
 
 interface OfficeHours {
     weekdayStart: Date;
@@ -69,16 +56,22 @@ const defaultOfficeHours: OfficeHours = {
     weekdayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
 };
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function ProfilePage(props: RouteComponentProps) {
+export const ProfilePage = observer((props: RouteComponentProps) => {
+    const { userStore } = useRootStore();
+    const { practitionerInfo, user } = userStore;
     const [tabIndex, setTabIndex] = useState(0);
-    const [name, setName] = useState<string>('');
-    const [doctorSpeciality, setDoctorSpeciality] = useState<DoctorSpeciality>(DoctorSpeciality.Unknown);
+    const [firstName, setFirstName] = useState<string>(user?.firstName || '');
+    const [lastName, setLastName] = useState<string>(user?.lastName || '');
+    const [doctorCategory, setDoctorCategory] = useState<DoctorCategory>(
+        practitionerInfo?.category || DoctorCategory.Unknown,
+    );
     const [doctorAvailability, setDoctorAvailability] = useState<DoctorAvailability>(DoctorAvailability.Weekdays);
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
-    const [bio, setBio] = useState('');
-    const [address, setAddress] = useState('');
-    const [appointmentSlot, setAppointmentSlot] = useState(15);
+    const [email, setEmail] = useState(practitionerInfo?.email || '');
+    const [phone, setPhone] = useState(practitionerInfo?.phone || '');
+    const [bio, setBio] = useState(practitionerInfo?.bio || '');
+    const [address, setAddress] = useState(practitionerInfo?.address || '');
+    const [appointmentSlot, setAppointmentSlot] = useState(practitionerInfo?.appointmentTimeSlot || 15);
+    const [location, setLocation] = useState<Location | null>(practitionerInfo?.location || null);
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
     const { isLoaded } = useLoadScript({ googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY as string });
     const pinMapOptions: google.maps.MapOptions = {
@@ -94,36 +87,90 @@ export function ProfilePage(props: RouteComponentProps) {
     };
     const [consultationPricing, setConsultationPricing] = useState(0);
     const [pinMapRef, setPinMapRef] = useState<GoogleMap | null>();
-    const [previewMapRef, setPreviewMapRef] = useState<GoogleMap | null>();
     const onPinMapLoad = useCallback((map) => {
         setPinMapRef(map);
     }, []);
-    const onPreviewMapLoad = useCallback((map) => {
-        setPreviewMapRef(map);
-    }, []);
     const [medicalAids, setMedicalAids] = useState<MedicalAid[]>([]);
     const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
+
+    const center = practitionerInfo?.location
+        ? {
+              lat: practitionerInfo?.location.latitude,
+              lng: practitionerInfo?.location.longitude,
+          }
+        : defaultLocation;
+
+    const previewCenter = location
+        ? {
+              lat: location.latitude,
+              lng: location.longitude,
+          }
+        : defaultLocation;
+
     const theme = useTheme();
 
     const toggleAvatarModal = useCallback(() => {
         setIsAvatarModalOpen(!isAvatarModalOpen);
     }, [isAvatarModalOpen]);
 
-    const handleAvatarSave = useCallback((image: string) => {
-        // eslint-disable-next-line no-console
-        console.log('TODO: Upload image', image);
+    const handleAvatarSave = useCallback(async (image: File) => {
+        await userStore.uploadAvatar(image);
+        setIsAvatarModalOpen(false);
     }, []);
+
+    const handleCenterChange = () => {
+        const geo = pinMapRef?.state.map?.getCenter().toJSON();
+        if (geo?.lat && geo.lng) {
+            setLocation({
+                latitude: geo?.lat,
+                longitude: geo?.lng,
+            });
+        }
+    };
+
+    const handleMedicalAidChange = (medicalAid: MedicalAid, checked: boolean) => {
+        if (checked) {
+            setMedicalAids([...medicalAids, medicalAid]);
+            return;
+        }
+        setMedicalAids(medicalAids.filter((x) => x !== medicalAid));
+    };
+
+    const avatarView = practitionerInfo?.avatarUrl ? (
+        <img
+            src={practitionerInfo.avatarUrl}
+            style={{ height: '90px', width: '90px', borderRadius: '25px' }}
+            alt={practitionerInfo.title}
+        />
+    ) : (
+        <Avatar variant="rounded" style={{ height: '90px', width: '90px', borderRadius: '25px' }} />
+    );
 
     const doctorInfoView = tabIndex === 0 && (
         <Grid direction="column" spacing={1} container>
             <Grid item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs>
-                    <p>Name</p>
+                    <p>First Name</p>
                 </Grid>
                 <Grid item md={8} xs>
                     <TextField
-                        value={name}
-                        onChange={(event) => setName(event.target.value as string)}
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value as string)}
+                        variant="filled"
+                        margin="none"
+                        id="name-input"
+                        fullWidth
+                    />
+                </Grid>
+            </Grid>
+            <Grid item container alignContent="center" alignItems="center">
+                <Grid item md={4} xs>
+                    <p>Last Name</p>
+                </Grid>
+                <Grid item md={8} xs>
+                    <TextField
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value as string)}
                         variant="filled"
                         margin="none"
                         id="name-input"
@@ -139,16 +186,17 @@ export function ProfilePage(props: RouteComponentProps) {
                     <Select
                         id="category-select"
                         disableUnderline
-                        value={doctorSpeciality}
-                        onChange={(event) => setDoctorSpeciality(event.target.value as DoctorSpeciality)}
+                        value={doctorCategory}
+                        onChange={(event) => setDoctorCategory(event.target.value as DoctorCategory)}
                         variant="filled"
                         displayEmpty
                         fullWidth
                     >
-                        <MenuItem value={DoctorSpeciality.Unknown}>Select a speciality</MenuItem>
-                        <MenuItem value={DoctorSpeciality.GP}>General practitioner</MenuItem>
-                        <MenuItem value={DoctorSpeciality.Physiotherapist}>Physiotherapist</MenuItem>
-                        <MenuItem value={DoctorSpeciality.Psychologist}>Psychologist</MenuItem>
+                        {Object.entries(DoctorCategories).map(([value, label]) => (
+                            <MenuItem key={value} value={value}>
+                                {label}
+                            </MenuItem>
+                        ))}
                     </Select>
                 </Grid>
             </Grid>
@@ -229,13 +277,10 @@ export function ProfilePage(props: RouteComponentProps) {
                         <GoogleMap
                             mapContainerClassName="map-container"
                             zoom={10}
-                            center={{ lat: -28.4792625, lng: 24.6727135 }}
+                            center={center}
                             options={(pinMapOptions as unknown) as google.maps.MapOptions}
                             onLoad={onPinMapLoad}
-                            onCenterChanged={() => {
-                                // eslint-disable-next-line no-console
-                                console.log(pinMapRef?.state.map?.getCenter().toJSON());
-                            }}
+                            onCenterChanged={handleCenterChange}
                             ref={(ref) => setPinMapRef(ref)}
                         />
                     )}
@@ -344,131 +389,30 @@ export function ProfilePage(props: RouteComponentProps) {
                         </AccordionSummary>
                         <AccordionDetails>
                             <FormGroup style={{ width: '100%' }}>
-                                <FormControlLabel
-                                    style={{
-                                        display: 'flex',
-                                        width: '100%',
-                                        justifyContent: 'space-between',
-                                        marginLeft: 0,
-                                        color: '#2D6455',
-                                    }}
-                                    control={
-                                        <Checkbox
-                                            color="primary"
-                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Discovery) !== -1}
-                                            onChange={(event, checked) => {
-                                                if (checked) {
-                                                    setMedicalAids([...medicalAids, MedicalAid.Discovery]);
-                                                    return;
+                                {Object.entries(MedicalAids).map(([key, name]) => (
+                                    <FormControlLabel
+                                        key={key}
+                                        style={{
+                                            display: 'flex',
+                                            width: '100%',
+                                            justifyContent: 'space-between',
+                                            marginLeft: 0,
+                                            color: '#2D6455',
+                                        }}
+                                        control={
+                                            <Checkbox
+                                                color="primary"
+                                                checked={medicalAids.includes(Number(key) as MedicalAid)}
+                                                onChange={(event, checked) =>
+                                                    handleMedicalAidChange(Number(key) as MedicalAid, checked)
                                                 }
-                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Discovery));
-                                            }}
-                                            name={MedicalAid[MedicalAid.Discovery]}
-                                        />
-                                    }
-                                    label={MedicalAid[MedicalAid.Discovery]}
-                                    labelPlacement="start"
-                                />
-                                <FormControlLabel
-                                    style={{
-                                        display: 'flex',
-                                        width: '100%',
-                                        justifyContent: 'space-between',
-                                        marginLeft: 0,
-                                        color: '#2D6455',
-                                    }}
-                                    control={
-                                        <Checkbox
-                                            color="primary"
-                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Momentum) !== -1}
-                                            onChange={(event, checked) => {
-                                                if (checked) {
-                                                    setMedicalAids([...medicalAids, MedicalAid.Momentum]);
-                                                    return;
-                                                }
-                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Momentum));
-                                            }}
-                                            name={MedicalAid[MedicalAid.Momentum]}
-                                        />
-                                    }
-                                    label={MedicalAid[MedicalAid.Momentum]}
-                                    labelPlacement="start"
-                                />
-                                <FormControlLabel
-                                    style={{
-                                        display: 'flex',
-                                        width: '100%',
-                                        justifyContent: 'space-between',
-                                        marginLeft: 0,
-                                        color: '#2D6455',
-                                    }}
-                                    control={
-                                        <Checkbox
-                                            color="primary"
-                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Fedhealth) !== -1}
-                                            onChange={(event, checked) => {
-                                                if (checked) {
-                                                    setMedicalAids([...medicalAids, MedicalAid.Fedhealth]);
-                                                    return;
-                                                }
-                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Fedhealth));
-                                            }}
-                                            name={MedicalAid[MedicalAid.Fedhealth]}
-                                        />
-                                    }
-                                    label={MedicalAid[MedicalAid.Fedhealth]}
-                                    labelPlacement="start"
-                                />
-                                <FormControlLabel
-                                    style={{
-                                        display: 'flex',
-                                        width: '100%',
-                                        justifyContent: 'space-between',
-                                        marginLeft: 0,
-                                        color: '#2D6455',
-                                    }}
-                                    control={
-                                        <Checkbox
-                                            color="primary"
-                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Bonitas) !== -1}
-                                            onChange={(event, checked) => {
-                                                if (checked) {
-                                                    setMedicalAids([...medicalAids, MedicalAid.Bonitas]);
-                                                    return;
-                                                }
-                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Bonitas));
-                                            }}
-                                            name={MedicalAid[MedicalAid.Bonitas]}
-                                        />
-                                    }
-                                    label={MedicalAid[MedicalAid.Bonitas]}
-                                    labelPlacement="start"
-                                />
-                                <FormControlLabel
-                                    style={{
-                                        display: 'flex',
-                                        width: '100%',
-                                        justifyContent: 'space-between',
-                                        marginLeft: 0,
-                                        color: '#2D6455',
-                                    }}
-                                    control={
-                                        <Checkbox
-                                            color="primary"
-                                            checked={medicalAids.findIndex((x) => x === MedicalAid.Medshield) !== -1}
-                                            onChange={(event, checked) => {
-                                                if (checked) {
-                                                    setMedicalAids([...medicalAids, MedicalAid.Medshield]);
-                                                    return;
-                                                }
-                                                setMedicalAids(medicalAids.filter((x) => x !== MedicalAid.Medshield));
-                                            }}
-                                            name={MedicalAid[MedicalAid.Medshield]}
-                                        />
-                                    }
-                                    label={MedicalAid[MedicalAid.Medshield]}
-                                    labelPlacement="start"
-                                />
+                                                name={name}
+                                            />
+                                        }
+                                        label={name}
+                                        labelPlacement="start"
+                                    />
+                                ))}
                             </FormGroup>
                         </AccordionDetails>
                     </Accordion>
@@ -740,10 +684,7 @@ export function ProfilePage(props: RouteComponentProps) {
                         <Grid container>
                             <Grid item lg={9} sm={12} style={{ display: 'flex', alignItems: 'center' }}>
                                 <Box width="90px" height="90px" position="relative">
-                                    <Avatar
-                                        variant="rounded"
-                                        style={{ height: '100%', width: '100%', borderRadius: '25px' }}
-                                    />
+                                    {avatarView}
                                     <AvatarOverlay
                                         width="100%"
                                         height="100%"
@@ -761,13 +702,17 @@ export function ProfilePage(props: RouteComponentProps) {
                                 </Box>
                                 <Box marginLeft="20px" display="flex" flexDirection="column">
                                     <Typography variant="h4" style={{ fontWeight: 'bold' }} color="primary">
-                                        Dr A General
+                                        {practitionerInfo?.title}
                                     </Typography>
-                                    <Typography variant="h5">Physiotherapist</Typography>
+                                    <Typography variant="h5">
+                                        {practitionerInfo && DoctorCategories[practitionerInfo?.category]}
+                                    </Typography>
                                 </Box>
                             </Grid>
                             <Grid item lg={3} sm={12} className="account-status-box">
-                                <p style={{ textAlign: 'center' }}>Account is active</p>
+                                <p style={{ textAlign: 'center' }}>
+                                    {user?.isActive ? 'Account is active' : 'Account is not active'}
+                                </p>
                             </Grid>
                         </Grid>
                         <Box height="30px" />
@@ -808,10 +753,7 @@ export function ProfilePage(props: RouteComponentProps) {
                                 </Box>
                                 <Box className="avatar-rating-container">
                                     <Box position="relative" height="105px">
-                                        <Avatar
-                                            variant="rounded"
-                                            style={{ height: '90px', width: '90px', borderRadius: '25px' }}
-                                        />
+                                        {avatarView}
                                         <div className="rating-container">
                                             <Star size="15px" />
                                             <span>4.8</span>
@@ -824,14 +766,8 @@ export function ProfilePage(props: RouteComponentProps) {
                                         <GoogleMap
                                             mapContainerClassName="listing-preview-map-container"
                                             zoom={10}
-                                            center={{ lat: -28.4792625, lng: 24.6727135 }}
+                                            center={previewCenter}
                                             options={(previewMapOptions as unknown) as google.maps.MapOptions}
-                                            onLoad={onPreviewMapLoad}
-                                            onCenterChanged={() => {
-                                                // eslint-disable-next-line no-console
-                                                console.log(previewMapRef?.state.map?.getCenter().toJSON());
-                                            }}
-                                            ref={(ref) => setPreviewMapRef(ref)}
                                         />
                                     )}
                                     <div className="marker-container">
@@ -848,21 +784,22 @@ export function ProfilePage(props: RouteComponentProps) {
                                     className="listing-doctor-title"
                                     color="primary"
                                 >
-                                    Dr A General
+                                    {practitionerInfo?.title}
                                 </Typography>
-                                <p>Physiotherapist</p>
+                                <p>{practitionerInfo && DoctorCategories[practitionerInfo?.category]}</p>
                             </Box>
-                            <Box position="relative" height="20%" marginTop="16px" margin="16px 18px 0px 18px">
-                                <Box className="icon-header-container">
-                                    <BookOpen size="20px" />
+                            {practitionerInfo?.bio && (
+                                <Box position="relative" height="20%" marginTop="16px" margin="16px 18px 0px 18px">
+                                    <Box className="icon-header-container">
+                                        <BookOpen size="20px" />
+                                    </Box>
+                                    <Box className="bio-info-container">
+                                        <Typography variant="body1" align="center">
+                                            {practitionerInfo?.bio}
+                                        </Typography>
+                                    </Box>
                                 </Box>
-                                <Box className="bio-info-container">
-                                    <Typography variant="body1" align="center">
-                                        I've been practising for over 12 years. Extensive experience in sports medicine
-                                        and athlete recovery.
-                                    </Typography>
-                                </Box>
-                            </Box>
+                            )}
                             <Box flexDirection="row" display="flex" margin="0px 18px" height="25%">
                                 <Box position="relative" width="50%" marginTop="10px" display="flex">
                                     <Box className="icon-header-container">
@@ -928,7 +865,7 @@ export function ProfilePage(props: RouteComponentProps) {
             </Modal>
         </Container>
     );
-}
+});
 
 interface StyledTabsProps {
     value: number;
