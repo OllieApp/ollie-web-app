@@ -18,14 +18,17 @@ const genders = [
     {
         label: 'female',
         symbol: '👩🏽‍⚕️',
+        value: 2,
     },
     {
         label: 'male',
         symbol: '👨🏻‍⚕️',
+        value: 1,
     },
     {
         label: 'prefer not to say',
         symbol: '🤐',
+        value: 0,
     },
 ];
 
@@ -49,14 +52,14 @@ export function GenderStep({ step }: StepViewProps) {
                     <RadioGroup {...field}>
                         <Grid container spacing={1}>
                             {genders.map((gender) => (
-                                <Grid key={gender.label} item>
+                                <Grid key={gender.value} item>
                                     <Box bgcolor="white" borderRadius={30} p={2} display="flex" alignItems="center">
                                         <Emoji symbol={gender.symbol} size={30} />
                                         <FormControlLabel
                                             control={<Radio color="primary" />}
                                             labelPlacement="start"
                                             label={gender.label}
-                                            value={gender.label}
+                                            value={gender.value}
                                             classes={{
                                                 label: styles.label,
                                             }}
