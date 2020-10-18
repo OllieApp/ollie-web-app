@@ -39,7 +39,7 @@ import { CirclePicker } from 'react-color';
 import { observer } from 'mobx-react';
 import { firestore } from '../../common/firebase/firebase-wrapper';
 import { useRootStore } from '../../common/stores/index';
-import { User } from '../../types';
+import { Practitioner } from '../../types';
 
 interface DoctorCalendarEvent {
     type: 'consultation' | 'video';
@@ -72,13 +72,13 @@ interface CalendarEvent {
     };
 }
 
-function SetupModal({ userInfo }: { userInfo: User }) {
+function SetupModal({ practitionerInfo }: { practitionerInfo: Practitioner }) {
     return (
         <Paper elevation={24}>
             <Box width="480px" bgcolor="white" borderRadius={40} p={5}>
                 <Box display="flex" flexDirection="column">
                     <Box pt={5} mb={2}>
-                        <Typography variant="h2">Hey Dr {userInfo.lastName}</Typography>
+                        <Typography variant="h2">Hey {practitionerInfo.title}</Typography>
                     </Box>
                     <Typography variant="h4">
                         We'll need to grab some details so that we can list your profile & increase your appointments!
@@ -156,7 +156,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     ]);
     const [eventColor, setEventColor] = useState<string | null>('');
     const { userStore } = useRootStore();
-    const { userInfo, isActive: isUserActive } = userStore;
+    const { practitionerInfo, isActive: isUserActive } = userStore;
 
     const businessHours = [
         {
@@ -174,11 +174,9 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     useEffect(() => {
         if (!userStore.user) return;
 
-        userStore.fetchUserInfo();
-
         const unsubscribe = firestore()
             .collection('appointments')
-            .where('doctor_id', '==', userStore.user.uid)
+            .where('doctor_id', '==', userStore.firebaseUser?.uid)
             .onSnapshot((snap) => {
                 const data: CalendarEvent[] = snap.docs.map((doc) => ({
                     title: doc.get('user_name'),
@@ -934,9 +932,9 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                         />
                     </Box>
                 ) : (
-                    userInfo && (
+                    practitionerInfo && (
                         <Box display="flex" flex={1} justifyContent="center" py={10}>
-                            <SetupModal userInfo={userInfo} />
+                            <SetupModal practitionerInfo={practitionerInfo} />
                         </Box>
                     )
                 )}
