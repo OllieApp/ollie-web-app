@@ -12,15 +12,15 @@ export interface User {
     firstName: string;
     lastName: string;
     email: string;
-    phone: string;
-    avatarUrl?: string;
+    phone: string | null;
+    avatarUrl?: string | null;
     countryCode: string;
-    zipCode?: string;
-    city?: string;
-    address?: string;
-    medicalAidNumber?: string;
-    medicalAidPlan?: string;
-    medicalAid?: MedicalAid;
+    zipCode?: string | null;
+    city?: string | null;
+    address?: string | null;
+    medicalAidNumber?: string | null;
+    medicalAidPlan?: string | null;
+    medicalAid?: MedicalAid | null;
     isEmailVerified: boolean;
     isPhoneVerified: boolean;
     isActive: boolean;
@@ -30,22 +30,22 @@ export interface Practitioner {
     id: string;
     title: string;
     email?: string;
-    phone?: string;
-    bio?: string;
-    description?: string;
-    address?: string;
+    phone?: string | null;
+    bio?: string | null;
+    description?: string | null;
+    address?: string | null;
     appointmentTimeSlot: number;
     consultationPricingRange: number;
     medicalAids: MedicalAid[];
     category: DoctorCategory;
-    location?: Location;
+    location?: Location | null;
     isActive: boolean;
     isVerified: boolean;
     rating: number;
     schedules: PractitionerSchedule[];
     gender: Gender;
     languages: Language[];
-    avatarUrl?: string;
+    avatarUrl?: string | null;
 }
 
 export interface Location {
