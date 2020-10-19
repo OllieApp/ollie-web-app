@@ -78,12 +78,10 @@ export default class UserStore {
         this.isLoadingUserInfo = false;
     }
 
-    @action async updatePractitionerProfile(data: Practitioner): Promise<void> {
+    @action async updatePractitionerProfile(data: Partial<Practitioner> & Partial<User>): Promise<void> {
         if (!this.practitionerIds) return;
 
-        await OllieAPI.patch<Practitioner>(`/practitioners/${this.practitionerIds[0]}`, {
-            data,
-        });
+        await OllieAPI.put<Practitioner>(`/practitioners/${this.practitionerIds[0]}`, data);
     }
 
     @action async uploadAvatar(file: File): Promise<void> {
