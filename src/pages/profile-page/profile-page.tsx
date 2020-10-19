@@ -110,8 +110,6 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
         onSubmit: async (data) => {
             try {
                 form.setSubmitting(true);
-                console.log(data);
-
                 await userStore.updatePractitionerProfile(data);
                 form.setSubmitting(false);
             } catch (ex) {
@@ -942,6 +940,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                     </Box>
                                 </Box>
                             )}
+                            {/* TODO: Get values from practitionerInfo */}
                             <Box flexDirection="row" display="flex" margin="0px 18px" height="25%">
                                 <Box position="relative" width="50%" marginTop="10px" display="flex">
                                     <Box className="icon-header-container">
