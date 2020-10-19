@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import * as yup from 'yup';
+import { useFormik } from 'formik';
 import { RouteComponentProps } from '@reach/router';
 import {
     Container,
@@ -23,6 +25,7 @@ import {
     FormGroup,
     FormControlLabel,
     Checkbox,
+    debounce,
 } from '@material-ui/core';
 import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calendar, Edit } from 'react-feather';
 import { KeyboardTimePicker } from '@material-ui/pickers';
@@ -37,11 +40,9 @@ import discovery from '../../images/discovery.png';
 import medshield from '../../images/medshield.png';
 import momentum from '../../images/momentum.png';
 import './profile-page.scss';
-import { DoctorCategory, DoctorAvailability, MedicalAid, Location } from '../../types';
+import { DoctorCategory, DoctorAvailability, MedicalAid, WeekDay, PractitionerSchedule } from '../../types';
 import { DoctorCategories, MedicalAids } from '../../constants';
 import { useRootStore } from '../../common/stores';
-
-const defaultLocation = { lat: -28.4792625, lng: 24.6727135 };
 
 interface OfficeHours {
     weekdayStart: Date;
@@ -51,96 +52,241 @@ interface OfficeHours {
     sundayStart?: Date;
     sundayEnd?: Date;
 }
-const defaultOfficeHours: OfficeHours = {
+
+const defaultLocation = { lat: -28.4792625, lng: 24.6727135 };
+
+const availableOfficeHours: OfficeHours = {
     weekdayStart: moment(new Date()).set({ hour: 8, minute: 0 }).toDate(),
     weekdayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
+    saturdayStart: moment(new Date()).set({ hour: 8, minute: 0 }).toDate(),
+    saturdayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
+    sundayStart: moment(new Date()).set({ hour: 8, minute: 0 }).toDate(),
+    sundayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
 };
+
+const defaultOfficeHours: OfficeHours = {
+    weekdayStart: availableOfficeHours.weekdayStart,
+    weekdayEnd: availableOfficeHours.weekdayEnd,
+};
+
+const validationSchema = yup.object().shape({
+    email: yup.string().email().required(),
+    title: yup.string().required('title is a required field'),
+    category: yup.number().required(),
+    appointmentTimeSlot: yup.number(),
+    address: yup.string().nullable(),
+    bio: yup.string().nullable(),
+    avatarUrl: yup.string().nullable(),
+    location: yup
+        .object({
+            latitude: yup.number(),
+            longitude: yup.number(),
+        })
+        .nullable(),
+    schedules: yup.array(yup.object<PractitionerSchedule>()),
+    phone: yup.string().nullable(),
+});
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const ProfilePage = observer((props: RouteComponentProps) => {
     const { userStore } = useRootStore();
-    const { practitionerInfo, user } = userStore;
-    const [tabIndex, setTabIndex] = useState(0);
-    const [firstName, setFirstName] = useState<string>(user?.firstName || '');
-    const [lastName, setLastName] = useState<string>(user?.lastName || '');
-    const [doctorCategory, setDoctorCategory] = useState<DoctorCategory>(
-        practitionerInfo?.category || DoctorCategory.Unknown,
+    const { practitionerInfo } = userStore;
+
+    const form = useFormik({
+        initialValues: {
+            email: practitionerInfo?.email,
+            title: practitionerInfo?.title,
+            location: practitionerInfo?.location,
+            category: practitionerInfo?.category || DoctorCategory.Unknown,
+            appointmentTimeSlot: practitionerInfo?.appointmentTimeSlot || 15,
+            medicalAids: practitionerInfo?.medicalAids || [],
+            address: practitionerInfo?.address || '',
+            bio: practitionerInfo?.bio || '',
+            avatarUrl: practitionerInfo?.avatarUrl || '',
+            phone: practitionerInfo?.phone || '',
+            schedules: [],
+        },
+        validationSchema,
+        onSubmit: async (data) => {
+            try {
+                form.setSubmitting(true);
+                console.log(data);
+
+                await userStore.updatePractitionerProfile(data);
+                form.setSubmitting(false);
+            } catch (ex) {
+                form.setSubmitting(false);
+                // eslint-disable-next-line no-alert
+                alert(ex.message);
+                // TODO: Report
+            }
+        },
+    });
+
+    const { latitude, longitude } = useMemo(
+        () =>
+            form.values.location ?? {
+                latitude: defaultLocation.lat,
+                longitude: defaultLocation.lng,
+            },
+        [form.values.location],
     );
+
+    const center = useMemo(
+        () => ({
+            lat: latitude,
+            lng: longitude,
+        }),
+        [latitude, longitude],
+    );
+
+    const [tabIndex, setTabIndex] = useState(0);
+    const theme = useTheme();
     const [doctorAvailability, setDoctorAvailability] = useState<DoctorAvailability>(DoctorAvailability.Weekdays);
-    const [email, setEmail] = useState(practitionerInfo?.email || '');
-    const [phone, setPhone] = useState(practitionerInfo?.phone || '');
-    const [bio, setBio] = useState(practitionerInfo?.bio || '');
-    const [address, setAddress] = useState(practitionerInfo?.address || '');
-    const [appointmentSlot, setAppointmentSlot] = useState(practitionerInfo?.appointmentTimeSlot || 15);
-    const [location, setLocation] = useState<Location | null>(practitionerInfo?.location || null);
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-    const { isLoaded } = useLoadScript({ googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY as string });
+    const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
+
+    const { isLoaded: isMapLoaded } = useLoadScript({
+        googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY as string,
+    });
+
     const pinMapOptions: google.maps.MapOptions = {
         styles: mapStyles,
         disableDefaultUI: true,
         fullscreenControl: true,
         zoomControl: true,
     };
+
     const previewMapOptions: google.maps.MapOptions = {
         styles: mapStyles,
         disableDefaultUI: true,
         draggable: false,
     };
+
     const [consultationPricing, setConsultationPricing] = useState(0);
     const [pinMapRef, setPinMapRef] = useState<GoogleMap | null>();
+
     const onPinMapLoad = useCallback((map) => {
         setPinMapRef(map);
     }, []);
-    const [medicalAids, setMedicalAids] = useState<MedicalAid[]>([]);
-    const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
-
-    const center = practitionerInfo?.location
-        ? {
-              lat: practitionerInfo?.location.latitude,
-              lng: practitionerInfo?.location.longitude,
-          }
-        : defaultLocation;
-
-    const previewCenter = location
-        ? {
-              lat: location.latitude,
-              lng: location.longitude,
-          }
-        : defaultLocation;
-
-    const theme = useTheme();
 
     const toggleAvatarModal = useCallback(() => {
         setIsAvatarModalOpen(!isAvatarModalOpen);
     }, [isAvatarModalOpen]);
 
-    const handleAvatarSave = useCallback(async (image: File) => {
-        await userStore.uploadAvatar(image);
-        setIsAvatarModalOpen(false);
-    }, []);
+    const submit = useMemo(() => debounce(form.submitForm, 2000), [form.submitForm]);
 
-    const handleCenterChange = () => {
+    const handleChange = useCallback(
+        (e: React.ChangeEvent<unknown>) => {
+            form.handleChange(e);
+            submit();
+        },
+        [form, submit],
+    );
+
+    const handleAvatarSave = useCallback(
+        async (image: File) => {
+            await userStore.uploadAvatar(image);
+            setIsAvatarModalOpen(false);
+        },
+        [userStore],
+    );
+
+    const handleCenterChange = useCallback(() => {
         const geo = pinMapRef?.state.map?.getCenter().toJSON();
-        if (geo?.lat && geo.lng) {
-            setLocation({
+        if (geo?.lat && geo?.lng && (geo?.lat !== latitude || geo?.lng !== longitude)) {
+            form.setFieldValue('location', {
                 latitude: geo?.lat,
                 longitude: geo?.lng,
             });
-        }
-    };
 
-    const handleMedicalAidChange = (medicalAid: MedicalAid, checked: boolean) => {
-        if (checked) {
-            setMedicalAids([...medicalAids, medicalAid]);
-            return;
+            submit();
         }
-        setMedicalAids(medicalAids.filter((x) => x !== medicalAid));
-    };
+    }, [form, pinMapRef, submit]);
 
-    const avatarView = practitionerInfo?.avatarUrl ? (
+    const handleMedicalAidChange = useCallback(
+        (medicalAid: MedicalAid, checked: boolean) => {
+            const current = (form.values.medicalAids || []).map(Number);
+            const newValue = checked ? [...current, Number(medicalAid)] : current.filter((x) => x !== medicalAid);
+
+            form.setFieldValue('medicalAids', newValue);
+            submit();
+        },
+        [form, submit],
+    );
+
+    const handleAvailabilityChange = useCallback(
+        (availability: DoctorAvailability) => {
+            setDoctorAvailability(availability);
+
+            let newOfficeHours: OfficeHours;
+
+            switch (availability) {
+                case DoctorAvailability.Weekdays:
+                    newOfficeHours = ['weekdayStart', 'weekdayEnd'].reduce(
+                        (memo, key) => ({
+                            ...memo,
+                            [key]: availableOfficeHours[key as keyof OfficeHours],
+                        }),
+                        {},
+                    ) as OfficeHours;
+                    break;
+
+                case DoctorAvailability.WeekdaysAndSat:
+                    newOfficeHours = ['weekdayStart', 'weekdayEnd', 'saturdayStart', 'saturdayEnd'].reduce(
+                        (memo, key) => ({
+                            ...memo,
+                            [key]: availableOfficeHours[key as keyof OfficeHours],
+                        }),
+                        {},
+                    ) as OfficeHours;
+                    break;
+                default:
+                    newOfficeHours = { ...availableOfficeHours };
+                    break;
+            }
+
+            handleOfficeHoursChange(newOfficeHours);
+        },
+        [setDoctorAvailability],
+    );
+
+    const handleOfficeHoursChange = useCallback(
+        (hours: OfficeHours) => {
+            setOfficeHours(hours);
+
+            const schedules = [
+                {
+                    daysOfWeek: [WeekDay.Monday, WeekDay.Tuesday, WeekDay.Wednesday, WeekDay.Thursday, WeekDay.Friday],
+                    startTime: moment.utc(hours.weekdayStart).format('HH:mm'),
+                    endTime: moment.utc(hours.weekdayEnd).format('HH:mm'),
+                } as PractitionerSchedule,
+                !!(hours.saturdayStart && hours.saturdayEnd) &&
+                    ({
+                        daysOfWeek: [WeekDay.Saturday],
+                        startTime: moment.utc(hours.saturdayStart).format('HH:mm'),
+                        endTime: moment.utc(hours.saturdayEnd).format('HH:mm'),
+                    } as PractitionerSchedule),
+                !!(hours.sundayStart && hours.sundayEnd) &&
+                    ({
+                        daysOfWeek: [WeekDay.Sunday],
+                        startTime: moment.utc(hours.sundayStart).format('HH:mm'),
+                        endTime: moment.utc(hours.sundayEnd).format('HH:mm'),
+                    } as PractitionerSchedule),
+            ].filter(Boolean);
+
+            form.setFieldValue('schedules', schedules);
+
+            submit();
+        },
+        [officeHours, setOfficeHours],
+    );
+
+    const avatarView = form.values.avatarUrl ? (
         <img
-            src={practitionerInfo.avatarUrl}
+            src={form.values.avatarUrl}
             style={{ height: '90px', width: '90px', borderRadius: '25px' }}
-            alt={practitionerInfo.title}
+            alt={practitionerInfo?.title}
         />
     ) : (
         <Avatar variant="rounded" style={{ height: '90px', width: '90px', borderRadius: '25px' }} />
@@ -150,27 +296,14 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
         <Grid direction="column" spacing={1} container>
             <Grid item container alignContent="center" alignItems="center">
                 <Grid item md={4} xs>
-                    <p>First Name</p>
+                    <p>Title</p>
                 </Grid>
                 <Grid item md={8} xs>
                     <TextField
-                        value={firstName}
-                        onChange={(event) => setFirstName(event.target.value as string)}
-                        variant="filled"
-                        margin="none"
-                        id="name-input"
-                        fullWidth
-                    />
-                </Grid>
-            </Grid>
-            <Grid item container alignContent="center" alignItems="center">
-                <Grid item md={4} xs>
-                    <p>Last Name</p>
-                </Grid>
-                <Grid item md={8} xs>
-                    <TextField
-                        value={lastName}
-                        onChange={(event) => setLastName(event.target.value as string)}
+                        name="title"
+                        value={form.values.title}
+                        onChange={handleChange}
+                        onBlur={form.handleBlur}
                         variant="filled"
                         margin="none"
                         id="name-input"
@@ -184,10 +317,11 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                 </Grid>
                 <Grid item md={8} xs>
                     <Select
-                        id="category-select"
                         disableUnderline
-                        value={doctorCategory}
-                        onChange={(event) => setDoctorCategory(event.target.value as DoctorCategory)}
+                        name="category"
+                        value={form.values.category}
+                        onChange={handleChange}
+                        onBlur={form.handleBlur}
                         variant="filled"
                         displayEmpty
                         fullWidth
@@ -206,11 +340,12 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                 </Grid>
                 <Grid item md={8} xs>
                     <TextField
-                        value={email}
-                        onChange={(event: { target: { value: string } }) => setEmail(event.target.value as string)}
+                        name="email"
+                        value={form.values.email}
+                        onChange={handleChange}
+                        onBlur={form.handleBlur}
                         variant="filled"
                         margin="none"
-                        id="email-input"
                         fullWidth
                         type="email"
                         inputMode="email"
@@ -223,11 +358,12 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                 </Grid>
                 <Grid item md={8} xs>
                     <TextField
-                        value={phone}
-                        onChange={(event: { target: { value: string } }) => setPhone(event.target.value as string)}
+                        name="phone"
+                        value={form.values.phone}
+                        onChange={handleChange}
+                        onBlur={form.handleBlur}
                         variant="filled"
                         margin="none"
-                        id="phone-input"
                         fullWidth
                         inputMode="tel"
                     />
@@ -239,11 +375,12 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                 </Grid>
                 <Grid item md={8} xs>
                     <TextField
-                        value={bio}
-                        onChange={(event: { target: { value: string } }) => setBio(event.target.value as string)}
+                        name="bio"
+                        value={form.values.bio}
+                        onChange={handleChange}
+                        onBlur={form.handleBlur}
                         variant="filled"
                         margin="none"
-                        id="bio-input"
                         fullWidth
                         multiline
                         rows={3}
@@ -256,11 +393,12 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                 </Grid>
                 <Grid item md={8} xs>
                     <TextField
-                        value={address}
-                        onChange={(event: { target: { value: string } }) => setAddress(event.target.value as string)}
+                        name="address"
+                        value={form.values.address}
+                        onChange={handleChange}
+                        onBlur={form.handleBlur}
                         variant="filled"
                         margin="none"
-                        id="address-input"
                         fullWidth
                         inputMode="text"
                         multiline
@@ -273,7 +411,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                     <p>Pin location</p>
                 </Grid>
                 <Grid item md={8} xs style={{ position: 'relative' }}>
-                    {isLoaded && (
+                    {isMapLoaded && (
                         <GoogleMap
                             mapContainerClassName="map-container"
                             zoom={10}
@@ -302,9 +440,11 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                 <Grid item md={8} xs>
                     <Select
                         id="appointment-slot-select"
+                        name="appointmentTimeSlot"
                         disableUnderline
-                        value={appointmentSlot}
-                        onChange={(event) => setAppointmentSlot(Number(event.target.value))}
+                        value={form.values.appointmentTimeSlot}
+                        onChange={handleChange}
+                        onBlur={form.handleBlur}
                         variant="filled"
                         displayEmpty
                         fullWidth
@@ -326,7 +466,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                         id="category-select"
                         disableUnderline
                         value={doctorAvailability}
-                        onChange={(event) => setDoctorAvailability(event.target.value as DoctorAvailability)}
+                        onChange={(event) => handleAvailabilityChange(event.target.value as DoctorAvailability)}
                         variant="filled"
                         displayEmpty
                         fullWidth
@@ -389,30 +529,31 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                         </AccordionSummary>
                         <AccordionDetails>
                             <FormGroup style={{ width: '100%' }}>
-                                {Object.entries(MedicalAids).map(([key, name]) => (
-                                    <FormControlLabel
-                                        key={key}
-                                        style={{
-                                            display: 'flex',
-                                            width: '100%',
-                                            justifyContent: 'space-between',
-                                            marginLeft: 0,
-                                            color: '#2D6455',
-                                        }}
-                                        control={
-                                            <Checkbox
-                                                color="primary"
-                                                checked={medicalAids.includes(Number(key) as MedicalAid)}
-                                                onChange={(event, checked) =>
-                                                    handleMedicalAidChange(Number(key) as MedicalAid, checked)
-                                                }
-                                                name={name}
-                                            />
-                                        }
-                                        label={name}
-                                        labelPlacement="start"
-                                    />
-                                ))}
+                                {((Object.entries(MedicalAids) as unknown) as [MedicalAid, string][]).map(
+                                    ([key, name]) => (
+                                        <FormControlLabel
+                                            key={key}
+                                            style={{
+                                                display: 'flex',
+                                                width: '100%',
+                                                justifyContent: 'space-between',
+                                                marginLeft: 0,
+                                                color: '#2D6455',
+                                            }}
+                                            control={
+                                                <Checkbox
+                                                    color="primary"
+                                                    name="medicalAids"
+                                                    value={Number(key)}
+                                                    checked={form.values.medicalAids?.includes(Number(key))}
+                                                    onChange={(e) => handleMedicalAidChange(key, e.target.checked)}
+                                                />
+                                            }
+                                            label={name}
+                                            labelPlacement="start"
+                                        />
+                                    ),
+                                )}
                             </FormGroup>
                         </AccordionDetails>
                     </Accordion>
@@ -456,9 +597,10 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                                 id="weekday-start-time-picker"
                                                 value={officeHours.weekdayStart}
                                                 onChange={(date) =>
-                                                    setOfficeHours({
+                                                    handleOfficeHoursChange({
                                                         ...officeHours,
-                                                        weekdayStart: date?.toDate() ?? defaultOfficeHours.weekdayStart,
+                                                        weekdayStart:
+                                                            date?.toDate() ?? availableOfficeHours.weekdayStart,
                                                     })
                                                 }
                                             />
@@ -480,9 +622,9 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                                 id="weekday-end-time-picker"
                                                 value={officeHours.weekdayEnd}
                                                 onChange={(date) =>
-                                                    setOfficeHours({
+                                                    handleOfficeHoursChange({
                                                         ...officeHours,
-                                                        weekdayEnd: date?.toDate() ?? defaultOfficeHours.weekdayEnd,
+                                                        weekdayEnd: date?.toDate() ?? availableOfficeHours.weekdayEnd,
                                                     })
                                                 }
                                             />
@@ -508,7 +650,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                                     id="saturday-start-time-picker"
                                                     value={officeHours.saturdayStart ?? officeHours.weekdayStart}
                                                     onChange={(date) =>
-                                                        setOfficeHours({
+                                                        handleOfficeHoursChange({
                                                             ...officeHours,
                                                             saturdayStart: date?.toDate(),
                                                         })
@@ -532,7 +674,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                                     id="saturday-end-time-picker"
                                                     value={officeHours.saturdayEnd ?? officeHours.weekdayEnd}
                                                     onChange={(date) =>
-                                                        setOfficeHours({
+                                                        handleOfficeHoursChange({
                                                             ...officeHours,
                                                             saturdayEnd: date?.toDate(),
                                                         })
@@ -560,7 +702,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                                     id="sunday-start-time-picker"
                                                     value={officeHours.sundayStart ?? officeHours.weekdayStart}
                                                     onChange={(date) =>
-                                                        setOfficeHours({
+                                                        handleOfficeHoursChange({
                                                             ...officeHours,
                                                             sundayStart: date?.toDate(),
                                                         })
@@ -584,7 +726,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                                     id="weekday-end-time-picker"
                                                     value={officeHours.sundayEnd ?? officeHours.weekdayEnd}
                                                     onChange={(date) =>
-                                                        setOfficeHours({
+                                                        handleOfficeHoursChange({
                                                             ...officeHours,
                                                             sundayEnd: date?.toDate(),
                                                         })
@@ -705,13 +847,13 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                         {practitionerInfo?.title}
                                     </Typography>
                                     <Typography variant="h5">
-                                        {practitionerInfo && DoctorCategories[practitionerInfo?.category]}
+                                        {practitionerInfo && DoctorCategories[form.values.category]}
                                     </Typography>
                                 </Box>
                             </Grid>
                             <Grid item lg={3} sm={12} className="account-status-box">
                                 <p style={{ textAlign: 'center' }}>
-                                    {user?.isActive ? 'Account is active' : 'Account is not active'}
+                                    {practitionerInfo?.isActive ? 'Account is active' : 'Account is not active'}
                                 </p>
                             </Grid>
                         </Grid>
@@ -762,11 +904,11 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                 </Box>
 
                                 <Box width="100%" height="80%" position="relative" marginBottom="60px">
-                                    {isLoaded && (
+                                    {isMapLoaded && (
                                         <GoogleMap
                                             mapContainerClassName="listing-preview-map-container"
                                             zoom={10}
-                                            center={previewCenter}
+                                            center={center}
                                             options={(previewMapOptions as unknown) as google.maps.MapOptions}
                                         />
                                     )}
