@@ -850,9 +850,9 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                                 </Box>
                             </Grid>
                             <Grid item lg={3} sm={12} className="account-status-box">
-                                <p style={{ textAlign: 'center' }}>
+                                <Box textAlign="center">
                                     {practitionerInfo?.isActive ? 'Account is active' : 'Account is not active'}
-                                </p>
+                                </Box>
                             </Grid>
                         </Grid>
                         <Box height="30px" />
