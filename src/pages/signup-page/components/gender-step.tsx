@@ -44,6 +44,8 @@ export function GenderStep({ step }: StepViewProps) {
     const [field, meta] = useField({ name: 'gender' });
     const styles = useStyles();
 
+    console.log(typeof field.value);
+
     return (
         <Box pt={4} pb={6}>
             <StepHeader step={step + 1} title="What's your gender?" />
@@ -60,6 +62,7 @@ export function GenderStep({ step }: StepViewProps) {
                                             labelPlacement="start"
                                             label={gender.label}
                                             value={gender.value}
+                                            checked={Number(field.value) === Number(gender.value)}
                                             classes={{
                                                 label: styles.label,
                                             }}
