@@ -1,4 +1,5 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ApolloProvider } from '@apollo/client';
 import Box from '@material-ui/core/Box';
 import MomentUtils from '@date-io/moment';
 import { Router, Redirect, LocationProvider, useLocation, useNavigate } from '@reach/router';
@@ -14,9 +15,10 @@ import { SideBarHeader } from '../../components/side-nav-bar/side-bar-header/sid
 // import { SettingsPage } from '../settings-page/settings-page';
 import { ReactComponent as Logo } from '../../images/ollie_ears_w_text.svg';
 import { theme } from '../../common/theming/theming';
-import './app.scss';
 import { useRootStore } from '../../common/stores';
 import { routes, getCurrentRouteConfig } from './routes';
+import { useApolloClient } from '../../common/apollo';
+import './app.scss';
 
 const Shell = observer(() => {
     const { userStore } = useRootStore();
@@ -67,14 +69,18 @@ const Shell = observer(() => {
 });
 
 function App() {
+    const apolloClient = useApolloClient();
+
     return (
-        <ThemeProvider theme={{ ...theme }}>
-            <MuiPickersUtilsProvider utils={MomentUtils}>
-                <LocationProvider>
-                    <Shell />
-                </LocationProvider>
-            </MuiPickersUtilsProvider>
-        </ThemeProvider>
+        <ApolloProvider client={apolloClient}>
+            <ThemeProvider theme={{ ...theme }}>
+                <MuiPickersUtilsProvider utils={MomentUtils}>
+                    <LocationProvider>
+                        <Shell />
+                    </LocationProvider>
+                </MuiPickersUtilsProvider>
+            </ThemeProvider>
+        </ApolloProvider>
     );
 }
 
