@@ -6,7 +6,7 @@ export class OllieAPI {
 
     static async getClient(): Promise<AxiosInstance> {
         if (!this.token) {
-            this.token = await firebase.auth().currentUser?.getIdToken(false);
+            this.token = await firebase.auth().currentUser?.getIdToken();
         }
 
         return Axios.create({

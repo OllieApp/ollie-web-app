@@ -44,8 +44,6 @@ export function GenderStep({ step }: StepViewProps) {
     const [field, meta] = useField({ name: 'gender' });
     const styles = useStyles();
 
-    console.log(typeof field.value);
-
     return (
         <Box pt={4} pb={6}>
             <StepHeader step={step + 1} title="What's your gender?" />

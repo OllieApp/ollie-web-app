@@ -59,6 +59,9 @@ export default class UserStore {
 
     @action async logout(): Promise<void> {
         await auth().signOut();
+        this.user = null;
+        this.practitionerInfo = null;
+        this.firebaseUser = null;
     }
 
     @action async fetchUserInfo(): Promise<void> {
@@ -82,6 +85,7 @@ export default class UserStore {
         if (!this.practitionerIds) return;
 
         await OllieAPI.patch<Practitioner>(`/practitioners/${this.practitionerIds[0]}`, data);
+        await this.fetchUserInfo();
     }
 
     @action async uploadAvatar(file: File): Promise<void> {
