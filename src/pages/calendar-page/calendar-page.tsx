@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import React, { useState, useEffect, createRef } from 'react';
+import React, { useState, useEffect, createRef, useMemo } from 'react';
 import { RouteComponentProps, Link } from '@reach/router';
 import FullCalendar, { EventClickArg } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -29,15 +29,15 @@ import {
     ButtonGroup,
     Typography,
 } from '@material-ui/core';
-import { Plus, Video, User as UserIcon } from 'react-feather';
+import { Video, User as UserIcon } from 'react-feather';
 import { KeyboardTimePicker, KeyboardDatePicker } from '@material-ui/pickers';
 import moment from 'moment';
 import interactionPlugin from '@fullcalendar/interaction'; // needed for dayClick
 import rrulePlugin from '@fullcalendar/rrule';
-import { RRule, Frequency } from 'rrule';
+// import { RRule, Frequency } from 'rrule';
 import { CirclePicker } from 'react-color';
 import { observer } from 'mobx-react';
-import { firestore } from '../../common/firebase/firebase-wrapper';
+import { useQuery, gql } from '@apollo/client';
 import { useRootStore } from '../../common/stores/index';
 import { Practitioner } from '../../types';
 
@@ -72,69 +72,39 @@ interface CalendarEvent {
     };
 }
 
-function SetupModal({ practitionerInfo }: { practitionerInfo: Practitioner }) {
-    return (
-        <Paper elevation={24}>
-            <Box width="480px" bgcolor="white" borderRadius={40} p={5}>
-                <Box display="flex" flexDirection="column">
-                    <Box pt={5} mb={2}>
-                        <Typography variant="h2">Hey {practitionerInfo.title}</Typography>
-                    </Box>
-                    <Typography variant="h4">
-                        We'll need to grab some details so that we can list your profile & increase your appointments!
-                    </Typography>
-                    <Box width="100%" mt={6}>
-                        <Grid container spacing={3} justify="flex-end">
-                            <Grid item>
-                                <Box display="flex" justifyContent="flex-end">
-                                    <Link to="#">
-                                        <Button variant="text" color="primary">
-                                            later
-                                        </Button>
-                                    </Link>
-                                </Box>
-                            </Grid>
-                            <Grid item>
-                                <Link to="#">
-                                    <Button type="submit" variant="contained" color="primary" fullWidth>
-                                        set up in 2min
-                                    </Button>
-                                </Link>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Box>
-            </Box>
-        </Paper>
-    );
+interface Appointment {
+    id: number;
+    status_id: number;
+    start_time: string;
+    doctor_video_url: string;
+    is_virtual: boolean;
+    user: {
+        id: number;
+        first_name: string;
+        last_name: string;
+    };
 }
+
+const GET_APPOINTMENTS = gql`
+    query appointments($practitionerId: bigint) {
+        appointment(limit: 100, where: { practitioner: { id: { _eq: $practitionerId } }, status_id: { _eq: 2 } }) {
+            id
+            status_id
+            start_time
+            doctor_video_url
+            is_virtual
+            user {
+                first_name
+                last_name
+            }
+        }
+    }
+`;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const CalendarPage = observer((props: RouteComponentProps) => {
     const calendarRef = createRef<FullCalendar>();
     const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-
-    const handleClick = (event: EventClickArg) => {
-        const startDate = moment(event.event.start);
-        startDate.subtract({ minutes: 30 });
-
-        if (calendarRef.current) {
-            calendarRef.current.getApi().scrollToTime({
-                hour: startDate.hour(),
-                minute: startDate.minute(),
-                day: startDate.day(),
-                month: startDate.month(),
-                year: startDate.year(),
-            });
-        }
-
-        setAnchorEl(event.el as HTMLButtonElement);
-    };
-
-    const handleClose = () => {
-        setAnchorEl(null);
-    };
-
     const open = Boolean(anchorEl);
     // const id = open ? 'simple-popover' : undefined;
 
@@ -148,50 +118,29 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     const [recurrentCount, setRecurrentCount] = useState<number | null>(0);
     const [recurrenceFreq, setRecurrenceFreq] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
     const [recurrenceEnd, setRecurrenceEnd] = useState<RecurrenceEnd>({ type: 'never', weeklyRecurrence: [] });
-    const [events, setEvents] = useState<Array<CalendarEvent>>([
-        { id: '231233', title: 'Siwela Smith', start: '2020-08-16T16:00:00+02:00', end: '2020-08-16T17:00:00+02:00' },
-        { id: '231233', title: 'Conference', start: '2020-08-16', end: '2020-08-18' },
-        { id: '231233', title: 'Arial Mikumba', start: '2020-08-17T10:30:00+02:00', end: '2020-08-17T12:30:00+02:00' },
-        { id: '231233', title: 'Bob Martini', start: '2020-08-18T08:00:00+02:00', end: '2020-08-18T09:00:00+02:00' },
-    ]);
     const [eventColor, setEventColor] = useState<string | null>('');
     const { userStore } = useRootStore();
     const { practitionerInfo, isActive: isUserActive } = userStore;
+    const businessHours = useMemo(() => practitionerInfo?.schedules, [practitionerInfo?.schedules]);
 
-    const businessHours = [
-        {
-            daysOfWeek: [1, 2, 3], // Monday, Tuesday, Wednesday
-            startTime: '08:00', // 8am
-            endTime: '18:00', // 6pm
+    const { data, refetch } = useQuery(GET_APPOINTMENTS, {
+        variables: {
+            practitionerId: practitionerInfo?.id,
         },
-        {
-            daysOfWeek: [4, 5], // Thursday, Friday
-            startTime: '10:00', // 10am
-            endTime: '16:00', // 4pm
-        },
-    ];
+    });
 
-    useEffect(() => {
-        if (!userStore.user) return;
-
-        const unsubscribe = firestore()
-            .collection('appointments')
-            .where('doctor_id', '==', userStore.firebaseUser?.uid)
-            .onSnapshot((snap) => {
-                const data: CalendarEvent[] = snap.docs.map((doc) => ({
-                    title: doc.get('user_name'),
-                    start: (doc.get('start_date') as firebase.firestore.Timestamp).toDate().toISOString(),
-                    id: doc.id,
-                    end: (doc.get('end_date') as firebase.firestore.Timestamp).toDate().toISOString(),
-                    extendedProps: {
-                        eventType: (doc.get('consultation_type') as string) === 'video' ? 'video' : 'consultation',
-                    },
-                }));
-                setEvents(data);
-            });
-
-        return () => unsubscribe();
-    }, []);
+    const events = useMemo(
+        () =>
+            data
+                ? data.appointment.map((appointment: Appointment) => ({
+                      id: appointment.id,
+                      title: `${appointment.user.first_name} ${appointment.user.last_name}`,
+                      start: appointment.start_time,
+                      end: moment(appointment.start_time).add(1, 'hour').toDate().toISOString(),
+                  }))
+                : [],
+        [data],
+    );
 
     useEffect(() => {
         if (isAllDay) {
@@ -240,6 +189,45 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
         }
     }, [open]);
 
+    const handleClick = (event: EventClickArg) => {
+        const start = moment(event.event.start);
+        start.subtract({ minutes: 30 });
+
+        if (calendarRef.current) {
+            calendarRef.current.getApi().scrollToTime({
+                hour: start.hour(),
+                minute: start.minute(),
+                day: start.day(),
+                month: start.month(),
+                year: start.year(),
+            });
+        }
+
+        const { el } = event;
+        el.dataset.id = event.event.id;
+
+        setAnchorEl(el as HTMLButtonElement);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleCancel = async () => {
+        // eslint-disable-next-line no-alert, no-restricted-globals
+        if (confirm('Are you sure?')) {
+            const id = anchorEl?.dataset.id;
+            if (!id) return;
+
+            await userStore.cancelAppointment(id);
+            refetch({
+                practitionerId: practitionerInfo?.id,
+            });
+
+            handleClose();
+        }
+    };
+
     function addDayToWeeklyRecurrence(weekDay: 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU') {
         if (recurrenceEnd.weeklyRecurrence.findIndex((e) => e === weekDay) === -1) {
             setRecurrenceEnd({
@@ -254,68 +242,68 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
         });
     }
 
-    function mapRecurrenceFreqToFrequency(freq: 'daily' | 'weekly' | 'monthly' | 'yearly'): Frequency {
-        switch (freq) {
-            case 'daily':
-                return Frequency.DAILY;
-            case 'monthly':
-                return Frequency.MONTHLY;
-            case 'weekly':
-                return Frequency.WEEKLY;
-            case 'yearly':
-                return Frequency.YEARLY;
-            default:
-                return Frequency.DAILY;
-        }
-    }
+    // function mapRecurrenceFreqToFrequency(freq: 'daily' | 'weekly' | 'monthly' | 'yearly'): Frequency {
+    //     switch (freq) {
+    //         case 'daily':
+    //             return Frequency.DAILY;
+    //         case 'monthly':
+    //             return Frequency.MONTHLY;
+    //         case 'weekly':
+    //             return Frequency.WEEKLY;
+    //         case 'yearly':
+    //             return Frequency.YEARLY;
+    //         default:
+    //             return Frequency.DAILY;
+    //     }
+    // }
 
     const addEventToCalendar = () => {
-        try {
-            setEvents([
-                ...events,
-                {
-                    id: '231233',
-                    title,
-                    start: startDate.toISOString(),
-                    end: endDate?.toISOString(),
-                    allDay: isAllDay,
-                    color: '#EDED85',
-                    rrule: isRecurringEvent
-                        ? new RRule({
-                              freq: mapRecurrenceFreqToFrequency(recurrenceFreq),
-                              interval: recurrentCount ?? undefined,
-                              dtstart: startDate,
-                              count: recurrenceEnd.occurrenceCount,
-                              until: recurrenceEnd.endDate ?? new Date(2999, 12, 31),
-                              byweekday: [
-                                  ...recurrenceEnd.weeklyRecurrence.map((i) => {
-                                      switch (i) {
-                                          case 'MO':
-                                              return 0;
-                                          case 'TU':
-                                              return 1;
-                                          case 'WE':
-                                              return 2;
-                                          case 'TH':
-                                              return 3;
-                                          case 'FR':
-                                              return 4;
-                                          case 'SA':
-                                              return 5;
-                                          case 'SU':
-                                              return 6;
-                                      }
-                                  }),
-                              ],
-                          }).toString()
-                        : undefined,
-                    backgroundColor: eventColor ?? undefined,
-                    borderColor: eventColor ?? undefined,
-                },
-            ]);
-        } catch (error) {
-            // TODO: Report
-        }
+        // try {
+        //     setEvents([
+        //         ...events,
+        //         {
+        //             id: '231233',
+        //             title,
+        //             start: startDate.toISOString(),
+        //             end: endDate?.toISOString(),
+        //             allDay: isAllDay,
+        //             color: '#EDED85',
+        //             rrule: isRecurringEvent
+        //                 ? new RRule({
+        //                       freq: mapRecurrenceFreqToFrequency(recurrenceFreq),
+        //                       interval: recurrentCount ?? undefined,
+        //                       dtstart: startDate,
+        //                       count: recurrenceEnd.occurrenceCount,
+        //                       until: recurrenceEnd.endDate ?? new Date(2999, 12, 31),
+        //                       byweekday: [
+        //                           ...recurrenceEnd.weeklyRecurrence.map((i) => {
+        //                               switch (i) {
+        //                                   case 'MO':
+        //                                       return 0;
+        //                                   case 'TU':
+        //                                       return 1;
+        //                                   case 'WE':
+        //                                       return 2;
+        //                                   case 'TH':
+        //                                       return 3;
+        //                                   case 'FR':
+        //                                       return 4;
+        //                                   case 'SA':
+        //                                       return 5;
+        //                                   case 'SU':
+        //                                       return 6;
+        //                               }
+        //                           }),
+        //                       ],
+        //                   }).toString()
+        //                 : undefined,
+        //             backgroundColor: eventColor ?? undefined,
+        //             borderColor: eventColor ?? undefined,
+        //         },
+        //     ]);
+        // } catch (error) {
+        //     // TODO: Report
+        // }
     };
 
     const recurrenceView = isRecurringEvent && (
@@ -554,6 +542,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
             </Grid>
         </Grid>
     );
+
     const createEventModal = (
         <Dialog
             fullWidth
@@ -754,76 +743,77 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
             </Container>
         </Dialog>
     );
-    const slotMaxTime = businessHours
-        .map((x) => x.endTime)
-        .reduce((a, b) => {
-            let aDateString = a;
-            let bDateString = b;
-            const padTime = (value: number) => value.toString().padStart(2, '0');
-            try {
-                // check here for date
-                if (aDateString.length > 6) {
-                    const date = new Date(aDateString);
-                    aDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-                }
-                if (bDateString.length > 6) {
-                    const date = new Date(bDateString);
-                    bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-                }
-            } catch (error) {
-                // TODO: Report
-            }
 
-            const compareRes = aDateString.localeCompare(bDateString, 'en');
-            switch (compareRes) {
-                case 1:
-                    return aDateString;
-                case -1:
-                    return bDateString;
-                default:
-                    return aDateString;
-            }
-        });
-    const slotMinTime = businessHours
-        .map((x) => x.startTime)
-        .reduce((a, b) => {
-            let aDateString = a;
-            let bDateString = b;
-            const padTime = (value: number) => value.toString().padStart(2, '0');
-            try {
-                // check here for date
-                if (a.length > 6) {
-                    const date = new Date(a);
-                    aDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-                }
-                if (b.length > 6) {
-                    const date = new Date(b);
-                    bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-                }
-            } catch (error) {
-                // TODO: Report
-            }
-            const compareRes = aDateString.localeCompare(bDateString, 'en');
-            switch (compareRes) {
-                case 1:
-                    return bDateString;
-                case -1:
-                    return aDateString;
-                default:
-                    return bDateString;
-            }
-        });
+    // const slotMaxTime = businessHours
+    //     ?.map((x) => x.endTime)
+    //     .reduce((a, b) => {
+    //         let aDateString = a;
+    //         let bDateString = b;
+    //         const padTime = (value: number) => value.toString().padStart(2, '0');
+    //         try {
+    //             // check here for date
+    //             if (aDateString.length > 6) {
+    //                 const date = new Date(aDateString);
+    //                 aDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+    //             }
+    //             if (bDateString.length > 6) {
+    //                 const date = new Date(bDateString);
+    //                 bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+    //             }
+    //         } catch (error) {
+    //             // TODO: Report
+    //         }
+
+    //         const compareRes = aDateString.localeCompare(bDateString, 'en');
+    //         switch (compareRes) {
+    //             case 1:
+    //                 return aDateString;
+    //             case -1:
+    //                 return bDateString;
+    //             default:
+    //                 return aDateString;
+    //         }
+    //     });
+    // const slotMinTime = businessHours
+    //     ?.map((x) => x.startTime)
+    //     .reduce((a, b) => {
+    //         let aDateString = a;
+    //         let bDateString = b;
+    //         const padTime = (value: number) => value.toString().padStart(2, '0');
+    //         try {
+    //             // check here for date
+    //             if (a.length > 6) {
+    //                 const date = new Date(a);
+    //                 aDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+    //             }
+    //             if (b.length > 6) {
+    //                 const date = new Date(b);
+    //                 bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+    //             }
+    //         } catch (error) {
+    //             // TODO: Report
+    //         }
+    //         const compareRes = aDateString.localeCompare(bDateString, 'en');
+    //         switch (compareRes) {
+    //             case 1:
+    //                 return bDateString;
+    //             case -1:
+    //                 return aDateString;
+    //             default:
+    //                 return bDateString;
+    //         }
+    //     });
 
     return (
         <>
             <Menu id="simple-menu" anchorEl={anchorEl} keepMounted open={Boolean(anchorEl)} onClose={handleClose}>
-                <MenuItem onClick={handleClose}>Edit</MenuItem>
-                <MenuItem onClick={handleClose}>Delete</MenuItem>
+                {/* <MenuItem onClick={handleClose}>Edit</MenuItem> */}
+                <MenuItem onClick={handleCancel}>Cancel</MenuItem>
             </Menu>
             <Container className="calendar-page-container" maxWidth="xl">
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                     <h1>My bookings</h1>
-                    <Button
+                    {/* <Button
                         disabled={!isUserActive}
                         color="primary"
                         startIcon={<Plus color="white" />}
@@ -832,7 +822,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                         onClick={() => setCreateEventOpen(true)}
                     >
                         Create event
-                    </Button>
+                    </Button> */}
                 </Box>
                 {isUserActive ? (
                     <Box marginTop="20px">
@@ -873,12 +863,12 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                                     </div>
                                 );
                             }}
-                            select={(info) => {
-                                setStartDate(info.start);
-                                setEndDate(info.end);
-                                setAllDayEvent(info.allDay);
-                                setCreateEventOpen(true);
-                            }}
+                            // select={(info) => {
+                            //     setStartDate(info.start);
+                            //     setEndDate(info.end);
+                            //     setAllDayEvent(info.allDay);
+                            //     setCreateEventOpen(true);
+                            // }}
                             eventContent={(args) => {
                                 // const startDate = args.event.start;
                                 // const endDate = args.event.end;
@@ -905,7 +895,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                                 minute: '2-digit',
                                 meridiem: 'short',
                             }}
-                            businessHours={businessHours.filter((x) => x.daysOfWeek)}
+                            businessHours={businessHours?.filter((x) => x.daysOfWeek)}
                             eventClick={(args) => {
                                 handleClick(args);
                             }}
@@ -924,8 +914,8 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                                 }
                                 return false;
                             }}
-                            slotMinTime={slotMinTime}
-                            slotMaxTime={slotMaxTime}
+                            // slotMinTime={slotMinTime}
+                            // slotMaxTime={slotMaxTime}
                             eventConstraint={businessHours}
                             weekNumbers
                             selectable
@@ -943,3 +933,40 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
         </>
     );
 });
+
+function SetupModal({ practitionerInfo }: { practitionerInfo: Practitioner }) {
+    return (
+        <Paper elevation={24}>
+            <Box width="480px" bgcolor="white" borderRadius={40} p={5}>
+                <Box display="flex" flexDirection="column">
+                    <Box pt={5} mb={2}>
+                        <Typography variant="h2">Hey {practitionerInfo.title}</Typography>
+                    </Box>
+                    <Typography variant="h4">
+                        We'll need to grab some details so that we can list your profile & increase your appointments!
+                    </Typography>
+                    <Box width="100%" mt={6}>
+                        <Grid container spacing={3} justify="flex-end">
+                            <Grid item>
+                                <Box display="flex" justifyContent="flex-end">
+                                    <Link to="#">
+                                        <Button variant="text" color="primary">
+                                            later
+                                        </Button>
+                                    </Link>
+                                </Box>
+                            </Grid>
+                            <Grid item>
+                                <Link to="#">
+                                    <Button type="submit" variant="contained" color="primary" fullWidth>
+                                        set up in 2min
+                                    </Button>
+                                </Link>
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </Box>
+            </Box>
+        </Paper>
+    );
+}
