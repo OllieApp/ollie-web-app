@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { User } from 'firebase';
-import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
+import { ApolloClient, InMemoryCache, HttpLink, NormalizedCacheObject } from '@apollo/client';
 import { auth, database } from '../firebase/firebase-wrapper';
 
-interface AuthState {
+export interface AuthState {
     status: string;
     user?: User;
     token?: string;
 }
 
-const createApolloClient = (authToken?: string) => {
+const createApolloClient = (authToken?: string): ApolloClient<NormalizedCacheObject> => {
     return new ApolloClient({
         link: new HttpLink({
             uri: process.env.REACT_APP_OLLIE_GRAPHQL_URL,
@@ -23,7 +23,7 @@ const createApolloClient = (authToken?: string) => {
     });
 };
 
-export const useApolloClient = () => {
+export const useApolloClient = (): [ApolloClient<NormalizedCacheObject>, AuthState] => {
     const [authState, setAuthState] = useState<AuthState>({ status: 'loading' });
 
     useEffect(() => {
@@ -52,5 +52,5 @@ export const useApolloClient = () => {
         });
     }, []);
 
-    return createApolloClient(authState.token);
+    return [createApolloClient(authState.token), authState];
 };

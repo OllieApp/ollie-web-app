@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { ApolloProvider } from '@apollo/client';
 import Box from '@material-ui/core/Box';
 import MomentUtils from '@date-io/moment';
@@ -17,11 +17,12 @@ import { ReactComponent as Logo } from '../../images/ollie_ears_w_text.svg';
 import { theme } from '../../common/theming/theming';
 import { useRootStore } from '../../common/stores';
 import { routes, getCurrentRouteConfig } from './routes';
-import { useApolloClient } from '../../common/apollo';
+import { AuthState, useApolloClient } from '../../common/apollo';
 import './app.scss';
 
-const Shell = observer(() => {
+const Shell = observer(({ authState }: { authState: AuthState }) => {
     const { userStore } = useRootStore();
+    const { status } = authState;
     const navigate = useNavigate();
     const location = useLocation();
     const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);
@@ -56,12 +57,19 @@ const Shell = observer(() => {
                     </SideBarFooter>
                 </SideBar>
             )}
+
             <Box bgcolor="gray.bg" marginLeft={currentRouteConfig.sidebar ? '150px' : 0}>
                 <Router>
                     <Redirect from="/" to="/calendar" noThrow />
-                    {Object.entries(routes).map(([path, { component: Page }]) => (
-                        <Page key={path} path={path} />
-                    ))}
+                    {Object.entries(routes)
+                        .filter(
+                            ([, config]) =>
+                                config.public ||
+                                (status === 'in' && userStore.isAuthenticated && userStore.practitionerInfo),
+                        )
+                        .map(([path, { component: Page }]) => (
+                            <Page key={path} path={path} />
+                        ))}
                 </Router>
             </Box>
         </>
@@ -69,14 +77,14 @@ const Shell = observer(() => {
 });
 
 function App() {
-    const apolloClient = useApolloClient();
+    const [apolloClient, authState] = useApolloClient();
 
     return (
         <ApolloProvider client={apolloClient}>
             <ThemeProvider theme={{ ...theme }}>
                 <MuiPickersUtilsProvider utils={MomentUtils}>
                     <LocationProvider>
-                        <Shell />
+                        <Shell authState={authState} />
                     </LocationProvider>
                 </MuiPickersUtilsProvider>
             </ThemeProvider>

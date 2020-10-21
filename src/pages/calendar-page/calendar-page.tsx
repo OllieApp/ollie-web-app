@@ -824,7 +824,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                         Create event
                     </Button> */}
                 </Box>
-                {isUserActive ? (
+                {isUserActive && practitionerInfo ? (
                     <Box marginTop="20px">
                         <FullCalendar
                             ref={calendarRef}
