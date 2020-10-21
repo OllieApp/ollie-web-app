@@ -22,7 +22,7 @@ export class OllieAPI {
 
     static async post<T = unknown>(
         path: string,
-        data: Record<string, unknown> | FormData,
+        data?: Record<string, unknown> | FormData,
         options?: AxiosRequestConfig,
     ): Promise<AxiosResponse<T>> {
         const client = await this.getClient();
