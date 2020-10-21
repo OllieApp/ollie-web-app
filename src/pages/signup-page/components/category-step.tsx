@@ -3,8 +3,7 @@ import { Box, Select, MenuItem, FormControl, FormHelperText } from '@material-ui
 import { useField } from 'formik';
 import { StepViewProps } from '../types';
 import { StepHeader } from './step-header';
-
-const categories = ['General Practitioner', 'Psychologist', 'Physiotherapist', 'Gynecologist', 'Dentist'];
+import { DoctorCategories } from '../../../constants';
 
 export function CategoryStep({ step }: StepViewProps) {
     const [field, meta] = useField({ name: 'category' });
@@ -16,9 +15,9 @@ export function CategoryStep({ step }: StepViewProps) {
             <Box mt={3}>
                 <FormControl error={!!meta.error} fullWidth>
                     <Select {...field} variant="filled" fullWidth>
-                        {categories.map((category) => (
-                            <MenuItem key={category} value={category}>
-                                {category}
+                        {Object.entries(DoctorCategories).map(([value, label]) => (
+                            <MenuItem key={value} value={value}>
+                                {label}
                             </MenuItem>
                         ))}
                     </Select>

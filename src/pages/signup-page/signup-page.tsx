@@ -46,8 +46,8 @@ const initialValues: AuthUser = {
     lastName: '',
     email: '',
     password: '',
-    category: 'General Practitioner',
-    gender: '',
+    category: 1,
+    gender: null!,
 };
 
 const validationSchema = yup.object().shape<AuthUser>({
@@ -61,8 +61,8 @@ const validationSchema = yup.object().shape<AuthUser>({
             /^.*(?=.{8,})((?=.*[!@#$%^&*()\-_=+{};:,<.>]){1})(?=.*\d)((?=.*[a-z]){1})((?=.*[A-Z]){1}).*$/,
             'Password must contain at least 8 characters, one uppercase, one number, and one special case character',
         ),
-    category: yup.string().required(),
-    gender: yup.string().oneOf(['male', 'female', 'prefer not to say']).required(),
+    category: yup.number().required(),
+    gender: yup.number().required(),
 });
 
 const useStyles = makeStyles({
@@ -90,7 +90,11 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
                 form.setSubmitting(false);
                 if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
             } catch (ex) {
+                await userStore.logout();
                 form.setSubmitting(false);
+
+                if (navigate) navigate('/signup', {});
+
                 // eslint-disable-next-line no-alert
                 alert(ex.message);
                 // TODO: Report

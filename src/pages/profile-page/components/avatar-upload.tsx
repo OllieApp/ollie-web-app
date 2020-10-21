@@ -9,7 +9,7 @@ import { Point, Area } from 'react-easy-crop/types';
 import { getCroppedImg } from '../../../common/image/crop';
 
 interface Props {
-    onSave: (image: string) => void;
+    onSave: (image: File) => void;
     onCancel: () => void;
 }
 
@@ -22,6 +22,22 @@ export function AvatarUpload({ onSave, onCancel }: Props) {
     const [flipX, setFlipX] = useState<boolean>(false);
     const [flipY, setFlipY] = useState<boolean>(false);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
+    const dataUrlToFile = (dataUrl: string): File => {
+        const arr = dataUrl.split(',');
+        const match = arr[0] ? arr[0].match(/:(.*?);/) : [];
+        const mime = match ? match[1] : '';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+
+        // eslint-disable-next-line no-plusplus
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+
+        return new File([u8arr], 'avatar', { type: mime });
+    };
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         if (!acceptedFiles.length) return;
@@ -60,7 +76,8 @@ export function AvatarUpload({ onSave, onCancel }: Props) {
         try {
             if (!image || !croppedAreaPixels) return;
             const croppedImage = await getCroppedImg(image, croppedAreaPixels, rotation);
-            onSave(croppedImage);
+            const file = dataUrlToFile(croppedImage);
+            onSave(file);
         } catch (e) {
             // TODO: Report
             // eslint-disable-next-line no-console

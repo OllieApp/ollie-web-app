@@ -26,6 +26,7 @@ const Shell = observer(() => {
 
     useEffect(() => {
         if (!userStore.isAuthenticated && !currentRouteConfig.public) navigate('/auth');
+        else if (!userStore.practitionerInfo && !userStore.isLoadingUserInfo) userStore.fetchUserInfo();
     }, [userStore.isAuthenticated, currentRouteConfig, navigate]);
 
     const handleLogout = () => userStore.logout();
