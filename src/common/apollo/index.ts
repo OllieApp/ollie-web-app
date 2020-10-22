@@ -1,56 +1,41 @@
-import { useState, useEffect } from 'react';
-import { User } from 'firebase';
+import { useCallback } from 'react';
 import { ApolloClient, InMemoryCache, HttpLink, NormalizedCacheObject } from '@apollo/client';
-import { auth, database } from '../firebase/firebase-wrapper';
 
-export interface AuthState {
-    status: string;
-    user?: User;
-    token?: string;
-}
-
-const createApolloClient = (authToken?: string): ApolloClient<NormalizedCacheObject> => {
-    return new ApolloClient({
-        link: new HttpLink({
+export const useApolloClient = (authToken?: string): ApolloClient<NormalizedCacheObject> => {
+    const createApolloClient = useCallback((): ApolloClient<NormalizedCacheObject> => {
+        const link = new HttpLink({
             uri: process.env.REACT_APP_OLLIE_GRAPHQL_URL,
-            headers: authToken
-                ? {
-                      Authorization: `Bearer ${authToken}`,
-                  }
-                : {},
-        }),
-        cache: new InMemoryCache(),
-    });
-};
+            fetch: (uri, options) => {
+                const opt = options || {};
 
-export const useApolloClient = (): [ApolloClient<NormalizedCacheObject>, AuthState] => {
-    const [authState, setAuthState] = useState<AuthState>({ status: 'loading' });
+                opt.headers = {
+                    ...options?.headers,
+                    Authorization: `Bearer ${authToken}`,
+                    'X-Hasura-Role': 'practitioner',
+                };
 
-    useEffect(() => {
-        return auth().onAuthStateChanged(async (user) => {
-            if (user) {
-                const token = await user.getIdToken();
-                const idTokenResult = await user.getIdTokenResult();
-                const hasuraClaim = idTokenResult.claims['https://hasura.io/jwt/claims'];
+                return fetch(uri, opt).then(async (res) => {
+                    const json = await res.json();
+                    const error = json.errors[0];
 
-                if (hasuraClaim) {
-                    setAuthState({ status: 'in', user, token });
-                } else {
-                    // Check if refresh is required.
-                    const metadataRef = database().ref(`metadata/${user.uid}/refreshTime`);
+                    if (error && error.extensions?.code === 'invalid-headers') {
+                        throw new Error('Session expired');
+                    }
 
-                    metadataRef.on('value', async (data) => {
-                        if (!data.exists) return;
-                        // Force refresh to pick up the latest custom claims changes.
-                        const newToken = await user.getIdToken(true);
-                        setAuthState({ status: 'in', user, token: newToken });
-                    });
-                }
-            } else {
-                setAuthState({ status: 'out' });
-            }
+                    return res;
+                });
+            },
         });
-    }, []);
 
-    return [createApolloClient(authState.token), authState];
+        return new ApolloClient({
+            link,
+            headers: {
+                Authorization: `Bearer ${authToken}`,
+                'X-Hasura-Role': 'practitioner',
+            },
+            cache: new InMemoryCache(),
+        });
+    }, [authToken]);
+
+    return createApolloClient();
 };

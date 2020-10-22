@@ -17,25 +17,48 @@ import { ReactComponent as Logo } from '../../images/ollie_ears_w_text.svg';
 import { theme } from '../../common/theming/theming';
 import { useRootStore } from '../../common/stores';
 import { routes, getCurrentRouteConfig } from './routes';
-import { AuthState, useApolloClient } from '../../common/apollo';
+import { useApolloClient } from '../../common/apollo';
 import './app.scss';
 
-const Shell = observer(({ authState }: { authState: AuthState }) => {
+const routeConfigs = Object.entries(routes);
+const publicRoutes = routeConfigs.filter(([, config]) => config.public);
+const privateRoutes = routeConfigs.filter(([, config]) => !config.public);
+
+const Shell = observer(() => {
     const { userStore } = useRootStore();
-    const { status } = authState;
+
+    const {
+        isAuthenticated,
+        isLoadingAuth,
+        isLoadingPractitionerInfo,
+        authStatus,
+        authToken,
+        practitionerInfo,
+    } = userStore;
+
     const navigate = useNavigate();
     const location = useLocation();
     const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);
+    const apolloClient = useApolloClient(authToken);
 
     useEffect(() => {
-        if (!userStore.isAuthenticated && !currentRouteConfig.public) navigate('/auth');
-        else if (!userStore.practitionerInfo && !userStore.isLoadingUserInfo) userStore.fetchUserInfo();
-    }, [userStore.isAuthenticated, currentRouteConfig, navigate]);
+        if (authStatus === 'in' && !practitionerInfo && !isLoadingPractitionerInfo) {
+            userStore.fetchUserInfo();
+        }
+    }, [authStatus, practitionerInfo, isLoadingPractitionerInfo, userStore]);
+
+    useEffect(() => {
+        if (currentRouteConfig.public === false && !isAuthenticated && !isLoadingAuth) {
+            navigate('/auth');
+        } else if (location.pathname !== '/signup' && currentRouteConfig.public && isAuthenticated && !isLoadingAuth) {
+            navigate('/calendar');
+        }
+    }, [isAuthenticated, isLoadingAuth, currentRouteConfig, navigate, location]);
 
     const handleLogout = () => userStore.logout();
 
     return (
-        <>
+        <ApolloProvider client={apolloClient}>
             {currentRouteConfig.sidebar && (
                 <SideBar>
                     <SideBarHeader>
@@ -60,35 +83,31 @@ const Shell = observer(({ authState }: { authState: AuthState }) => {
 
             <Box bgcolor="gray.bg" marginLeft={currentRouteConfig.sidebar ? '150px' : 0}>
                 <Router>
-                    <Redirect from="/" to="/calendar" noThrow />
-                    {Object.entries(routes)
-                        .filter(
-                            ([, config]) =>
-                                config.public ||
-                                (status === 'in' && userStore.isAuthenticated && userStore.practitionerInfo),
-                        )
-                        .map(([path, { component: Page }]) => (
-                            <Page key={path} path={path} />
-                        ))}
+                    {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+                    {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+
+                    {publicRoutes.map(([path, { component: Page }]) => (
+                        <Page key={path} path={path} />
+                    ))}
+
+                    {isAuthenticated &&
+                        userStore.practitionerInfo &&
+                        privateRoutes.map(([path, { component: Page }]) => <Page key={path} path={path} />)}
                 </Router>
             </Box>
-        </>
+        </ApolloProvider>
     );
 });
 
 function App() {
-    const [apolloClient, authState] = useApolloClient();
-
     return (
-        <ApolloProvider client={apolloClient}>
+        <LocationProvider>
             <ThemeProvider theme={{ ...theme }}>
                 <MuiPickersUtilsProvider utils={MomentUtils}>
-                    <LocationProvider>
-                        <Shell authState={authState} />
-                    </LocationProvider>
+                    <Shell />
                 </MuiPickersUtilsProvider>
             </ThemeProvider>
-        </ApolloProvider>
+        </LocationProvider>
     );
 }
 

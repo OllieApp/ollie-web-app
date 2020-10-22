@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import * as yup from 'yup';
-import { Link, RouteComponentProps } from '@reach/router';
+import { Link } from '@reach/router';
 import { Box, makeStyles, Typography, Button, Grid, TextField, CircularProgress } from '@material-ui/core';
 import { useFormik } from 'formik';
 import { observer } from 'mobx-react';
@@ -19,12 +19,8 @@ const validationSchema = yup.object().shape<{ email: string; password: string }>
     password: yup.string().required(),
 });
 
-export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
+export const LoginPage = observer(() => {
     const { userStore } = useRootStore();
-
-    useEffect(() => {
-        if (userStore.isAuthenticated && navigate) navigate('/');
-    }, [userStore.isAuthenticated, navigate]);
 
     const styles = useStyles();
     const form = useFormik({
@@ -35,12 +31,8 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
         },
         onSubmit: async ({ email, password }) => {
             try {
-                form.setSubmitting(true);
                 await userStore.loginWithEmail({ email, password });
-                form.setSubmitting(false);
-                if (navigate) navigate('/');
             } catch (ex) {
-                form.setSubmitting(false);
                 // eslint-disable-next-line no-alert
                 alert(ex.message);
                 // TODO: Report
@@ -109,10 +101,10 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
                                         type="submit"
                                         variant="contained"
                                         color="primary"
-                                        disabled={form.isSubmitting}
+                                        disabled={userStore.isLoadingAuth}
                                         fullWidth
                                     >
-                                        {form.isSubmitting && (
+                                        {userStore.isLoadingAuth && (
                                             <Box mr={1} display="inline-flex">
                                                 <CircularProgress size="1em" />
                                             </Box>

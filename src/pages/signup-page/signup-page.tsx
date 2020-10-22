@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import * as yup from 'yup';
 import { observer } from 'mobx-react';
 import { Box, Button, CircularProgress, makeStyles } from '@material-ui/core';
@@ -75,26 +75,17 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     const { userStore } = useRootStore();
     const styles = useStyles();
 
-    useEffect(() => {
-        if (userStore.isAuthenticated && navigate) navigate('/');
-    }, [userStore.isAuthenticated, navigate]);
-
     const [currentStep, setCurrentStep] = useState<number>(0);
     const form = useFormik<AuthUser>({
         initialValues,
         validationSchema,
         onSubmit: async (userData) => {
             try {
-                form.setSubmitting(true);
                 await userStore.signUpWithEmail(userData);
-                form.setSubmitting(false);
                 if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
             } catch (ex) {
                 await userStore.logout();
-                form.setSubmitting(false);
-
                 if (navigate) navigate('/signup', {});
-
                 // eslint-disable-next-line no-alert
                 alert(ex.message);
                 // TODO: Report
