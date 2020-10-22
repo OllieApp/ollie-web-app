@@ -28,23 +28,6 @@ export default class UserStore {
         this.rootStore = rootStore;
 
         auth().onAuthStateChanged((user) => this.updateFirebaseUser(user));
-
-        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-        // @ts-ignore
-        // window.MOCK_APPOINTMENTS = () => {
-        //     const randomNum = (from: number, to: number) => Math.floor(Math.random() * to) + from;
-
-        //     Array(20)
-        //         .fill(1)
-        //         .forEach(() => {
-        //             OllieAPI.post('/appointments', {
-        //                 practitionerId: Number(this.practitionerInfo?.id),
-        //                 userNotes: 'My cool notes',
-        //                 startTime: new Date(Date.UTC(2020, 9, randomNum(22, 29), randomNum(7, 11), randomNum(0, 30))),
-        //                 isVirtual: true,
-        //             });
-        //         });
-        // };
     }
 
     @computed get isAuthenticated(): boolean {
