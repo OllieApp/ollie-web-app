@@ -200,7 +200,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
 
             submit();
         }
-    }, [form, pinMapRef, submit]);
+    }, [form, pinMapRef, submit, latitude, longitude]);
 
     const handleMedicalAidChange = useCallback(
         (medicalAid: MedicalAid, checked: boolean) => {
@@ -211,6 +211,37 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
             submit();
         },
         [form, submit],
+    );
+
+    const handleOfficeHoursChange = useCallback(
+        (hours: OfficeHours) => {
+            setOfficeHours(hours);
+
+            const schedules = [
+                {
+                    daysOfWeek: [WeekDay.Monday, WeekDay.Tuesday, WeekDay.Wednesday, WeekDay.Thursday, WeekDay.Friday],
+                    startTime: moment.utc(hours.weekdayStart).format('HH:mm'),
+                    endTime: moment.utc(hours.weekdayEnd).format('HH:mm'),
+                } as PractitionerSchedule,
+                !!(hours.saturdayStart && hours.saturdayEnd) &&
+                    ({
+                        daysOfWeek: [WeekDay.Saturday],
+                        startTime: moment.utc(hours.saturdayStart).format('HH:mm'),
+                        endTime: moment.utc(hours.saturdayEnd).format('HH:mm'),
+                    } as PractitionerSchedule),
+                !!(hours.sundayStart && hours.sundayEnd) &&
+                    ({
+                        daysOfWeek: [WeekDay.Sunday],
+                        startTime: moment.utc(hours.sundayStart).format('HH:mm'),
+                        endTime: moment.utc(hours.sundayEnd).format('HH:mm'),
+                    } as PractitionerSchedule),
+            ].filter(Boolean);
+
+            form.setFieldValue('schedules', schedules);
+
+            submit();
+        },
+        [setOfficeHours, form, submit],
     );
 
     const handleAvailabilityChange = useCallback(
@@ -246,38 +277,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
 
             handleOfficeHoursChange(newOfficeHours);
         },
-        [setDoctorAvailability],
-    );
-
-    const handleOfficeHoursChange = useCallback(
-        (hours: OfficeHours) => {
-            setOfficeHours(hours);
-
-            const schedules = [
-                {
-                    daysOfWeek: [WeekDay.Monday, WeekDay.Tuesday, WeekDay.Wednesday, WeekDay.Thursday, WeekDay.Friday],
-                    startTime: moment.utc(hours.weekdayStart).format('HH:mm'),
-                    endTime: moment.utc(hours.weekdayEnd).format('HH:mm'),
-                } as PractitionerSchedule,
-                !!(hours.saturdayStart && hours.saturdayEnd) &&
-                    ({
-                        daysOfWeek: [WeekDay.Saturday],
-                        startTime: moment.utc(hours.saturdayStart).format('HH:mm'),
-                        endTime: moment.utc(hours.saturdayEnd).format('HH:mm'),
-                    } as PractitionerSchedule),
-                !!(hours.sundayStart && hours.sundayEnd) &&
-                    ({
-                        daysOfWeek: [WeekDay.Sunday],
-                        startTime: moment.utc(hours.sundayStart).format('HH:mm'),
-                        endTime: moment.utc(hours.sundayEnd).format('HH:mm'),
-                    } as PractitionerSchedule),
-            ].filter(Boolean);
-
-            form.setFieldValue('schedules', schedules);
-
-            submit();
-        },
-        [officeHours, setOfficeHours],
+        [setDoctorAvailability, handleOfficeHoursChange],
     );
 
     const avatarView = form.values.avatarUrl ? (
