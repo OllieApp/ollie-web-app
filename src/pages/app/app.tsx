@@ -41,6 +41,11 @@ const Shell = observer(() => {
     const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);
     const apolloClient = useApolloClient(authToken);
 
+    const isBootstraped = useMemo<boolean>(
+        () => Boolean(isAuthenticated && userStore.practitionerInfo && apolloClient),
+        [isAuthenticated, userStore.practitionerInfo, apolloClient],
+    );
+
     useEffect(() => {
         if (authStatus === 'in' && !practitionerInfo && !isLoadingPractitionerInfo) {
             userStore.fetchUserInfo();
@@ -58,7 +63,7 @@ const Shell = observer(() => {
     const handleLogout = () => userStore.logout();
 
     return (
-        <ApolloProvider client={apolloClient}>
+        <>
             {currentRouteConfig.sidebar && (
                 <SideBar>
                     <SideBarHeader>
@@ -89,13 +94,22 @@ const Shell = observer(() => {
                     {publicRoutes.map(([path, { component: Page }]) => (
                         <Page key={path} path={path} />
                     ))}
-
-                    {isAuthenticated &&
-                        userStore.practitionerInfo &&
-                        privateRoutes.map(([path, { component: Page }]) => <Page key={path} path={path} />)}
                 </Router>
+
+                {isBootstraped && apolloClient && (
+                    <ApolloProvider client={apolloClient}>
+                        <Router>
+                            {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+                            {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+
+                            {privateRoutes.map(([path, { component: Page }]) => (
+                                <Page key={path} path={path} />
+                            ))}
+                        </Router>
+                    </ApolloProvider>
+                )}
             </Box>
-        </ApolloProvider>
+        </>
     );
 });
 
