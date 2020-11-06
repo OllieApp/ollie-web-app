@@ -20,6 +20,7 @@ interface Appointment {
     id: number;
     status_id: number;
     start_time: string;
+    end_time: string;
     doctor_video_url: string;
     is_virtual: boolean;
     user: {
@@ -37,7 +38,7 @@ const GET_APPOINTMENTS_SUBSCRIPTION = gql`
                 practitioner: { id: { _eq: $practitionerId } }
                 status_id: { _eq: 2 }
                 start_time: { _gte: $startTime }
-                end_time: { _gte: $endTime }
+                end_time: { _lte: $endTime }
             }
         ) {
             id
@@ -61,8 +62,8 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     // const open = Boolean(anchorEl);
     // const id = open ? 'simple-popover' : undefined;
 
-    const [calendarStartDate, setCalendarStartDate] = useState<Date>(null!);
-    const [calendarEndDate, setCalendarEndDate] = useState<Date>(null!);
+    const [startDate, setStartDate] = useState<Date>(null!);
+    const [endDate, setEndDate] = useState<Date>(null!);
     const { userStore } = useRootStore();
     const { practitionerInfo, isActive: isUserActive } = userStore;
     const businessHours = useMemo(() => practitionerInfo?.schedules, [practitionerInfo?.schedules]);
@@ -70,10 +71,14 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     const { data } = useSubscription(GET_APPOINTMENTS_SUBSCRIPTION, {
         variables: {
             practitionerId: practitionerInfo?.id,
-            startTime: calendarStartDate,
-            endTime: calendarEndDate,
+            startTime: startDate,
+            endTime: endDate,
         },
     });
+
+    console.log(data);
+    console.log(startDate);
+    console.log(endDate);
 
     const events = useMemo(
         () =>
@@ -82,7 +87,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                       id: appointment.id,
                       title: `${appointment.user.first_name} ${appointment.user.last_name}`,
                       start: appointment.start_time,
-                      end: moment(appointment.start_time).add(1, 'hour').toDate().toISOString(),
+                      end: appointment.end_time,
                   }))
                 : [],
         [data],
@@ -126,10 +131,10 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
 
     const handleDateRangeChange = useCallback(
         (e) => {
-            setCalendarStartDate(e.start);
-            setCalendarEndDate(e.end);
+            setStartDate(e.start);
+            setEndDate(e.end);
         },
-        [setCalendarStartDate, setCalendarEndDate],
+        [setStartDate, setEndDate],
     );
 
     return (
