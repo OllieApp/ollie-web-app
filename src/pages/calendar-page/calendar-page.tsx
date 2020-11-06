@@ -76,10 +76,6 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
         },
     });
 
-    console.log(data);
-    console.log(startDate);
-    console.log(endDate);
-
     const events = useMemo(
         () =>
             data
