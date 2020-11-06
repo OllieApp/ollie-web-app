@@ -2,10 +2,30 @@ import { useCallback } from 'react';
 import { ApolloClient, InMemoryCache, HttpLink, NormalizedCacheObject, split } from '@apollo/client';
 import { WebSocketLink } from '@apollo/client/link/ws';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { SubscriptionClient } from 'subscriptions-transport-ws';
+import { ClientOptions, SubscriptionClient } from 'subscriptions-transport-ws';
 import { OperationDefinitionNode } from 'graphql';
 
-export const useApolloClient = (authToken?: string): ApolloClient<NormalizedCacheObject> => {
+class CustomSubscriptionClient extends SubscriptionClient {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    constructor(url: string, options?: ClientOptions, webSocketImpl?: any, webSocketProtocols?: string | string[]) {
+        // It needs to be forced lazy otherwise it will try to connect before the setting up the following workaround
+        super(url, { ...options, lazy: true }, webSocketImpl, webSocketProtocols);
+
+        // Workaround suggested for ISSUE 377 on subscriptions-transport-ws package
+        // https://github.com/apollographql/subscriptions-transport-ws/issues/377#issuecomment-375567665
+        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+        // @ts-ignore
+        this.maxConnectTimeGenerator.setMin(this.maxConnectTimeGenerator.max);
+        const { lazy = false } = options || {};
+        if (!lazy) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+            // @ts-ignore
+            this.connect();
+        }
+    }
+}
+
+export const useApolloClient = (authToken?: string): ApolloClient<NormalizedCacheObject> | null => {
     const createApolloClient = useCallback((): ApolloClient<NormalizedCacheObject> => {
         const headers = {
             Authorization: `Bearer ${authToken}`,
@@ -36,7 +56,7 @@ export const useApolloClient = (authToken?: string): ApolloClient<NormalizedCach
             },
         });
 
-        const client = new SubscriptionClient(process.env.REACT_APP_OLLIE_GRAPHQL_WS_URL as string, {
+        const client = new CustomSubscriptionClient(process.env.REACT_APP_OLLIE_GRAPHQL_WS_URL as string, {
             reconnect: true,
             connectionParams: {
                 headers,
@@ -60,5 +80,5 @@ export const useApolloClient = (authToken?: string): ApolloClient<NormalizedCach
         });
     }, [authToken]);
 
-    return createApolloClient();
+    return authToken ? createApolloClient() : null;
 };
