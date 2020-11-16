@@ -1,9 +1,9 @@
 export interface StepViewProps {
-    step: number;
+  step: number;
 }
 
 export interface StepConfig {
-    key: string;
-    fields: string[];
-    component: (props: StepViewProps) => React.ReactElement;
+  key: string;
+  fields: string[];
+  component: (props: StepViewProps) => React.ReactElement;
 }
