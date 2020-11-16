@@ -25,104 +25,105 @@ const publicRoutes = routeConfigs.filter(([, config]) => config.public);
 const privateRoutes = routeConfigs.filter(([, config]) => !config.public);
 
 const Shell = observer(() => {
-    const { userStore } = useRootStore();
+  const { userStore } = useRootStore();
 
-    const {
-        isAuthenticated,
-        isLoadingAuth,
-        isLoadingPractitionerInfo,
-        authStatus,
-        authToken,
-        practitionerInfo,
-    } = userStore;
+  const {
+    isAuthenticated,
+    isLoadingAuth,
+    isLoadingPractitionerInfo,
+    authStatus,
+    authToken,
+    practitionerInfo,
+  } = userStore;
 
-    const navigate = useNavigate();
-    const location = useLocation();
-    const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);
-    const apolloClient = useApolloClient(authToken);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);
+  const apolloClient = useApolloClient(authToken);
 
-    const isBootstraped = useMemo<boolean>(
-        () => Boolean(isAuthenticated && userStore.practitionerInfo && apolloClient),
-        [isAuthenticated, userStore.practitionerInfo, apolloClient],
-    );
+  const isBootstraped = useMemo<boolean>(() => Boolean(isAuthenticated && userStore.practitionerInfo && apolloClient), [
+    isAuthenticated,
+    userStore.practitionerInfo,
+    apolloClient,
+  ]);
 
-    useEffect(() => {
-        if (authStatus === 'in' && !practitionerInfo && !isLoadingPractitionerInfo) {
-            userStore.fetchUserInfo();
-        }
-    }, [authStatus, practitionerInfo, isLoadingPractitionerInfo, userStore]);
+  useEffect(() => {
+    if (authStatus === 'in' && !practitionerInfo && !isLoadingPractitionerInfo) {
+      userStore.fetchUserInfo();
+    }
+  }, [authStatus, practitionerInfo, isLoadingPractitionerInfo, userStore]);
 
-    useEffect(() => {
-        if (currentRouteConfig.public === false && !isAuthenticated && !isLoadingAuth) {
-            navigate('/auth');
-        } else if (location.pathname !== '/signup' && currentRouteConfig.public && isAuthenticated && !isLoadingAuth) {
-            navigate('/calendar');
-        }
-    }, [isAuthenticated, isLoadingAuth, currentRouteConfig, navigate, location]);
+  useEffect(() => {
+    if (currentRouteConfig.public === false && !isAuthenticated && !isLoadingAuth) {
+      navigate('/auth');
+    } else if (location.pathname !== '/signup' && currentRouteConfig.public && isAuthenticated && !isLoadingAuth) {
+      navigate('/calendar');
+    }
+  }, [isAuthenticated, isLoadingAuth, currentRouteConfig, navigate, location]);
 
-    const handleLogout = () => userStore.logout();
+  const handleLogout = () => userStore.logout();
 
-    return (
-        <>
-            {currentRouteConfig.sidebar && (
-                <SideBar>
-                    <SideBarHeader>
-                        <Logo style={{ width: '90px', height: '150px' }} />
-                    </SideBarHeader>
-                    <SideBarContent>
-                        <SideBarItem icon="calendar" label="Bookings" path="/calendar" />
-                        <SideBarItem icon="profile" label="Profile" path="/profile" />
-                    </SideBarContent>
-                    <SideBarFooter>
-                        <Box display="flex" justifyContent="center">
-                            <Button className="log-out-item" size="small" onClick={handleLogout}>
-                                <Box mr={1} display="inline-flex">
-                                    <LogOut size="14" className="log-out-icon" color="#2D6455" />
-                                </Box>
-                                <span>Log out</span>
-                            </Button>
-                        </Box>
-                    </SideBarFooter>
-                </SideBar>
-            )}
-
-            <Box bgcolor="gray.bg" marginLeft={currentRouteConfig.sidebar ? '150px' : 0}>
-                <Router>
-                    {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
-                    {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
-
-                    {publicRoutes.map(([path, { component: Page }]) => (
-                        <Page key={path} path={path} />
-                    ))}
-                </Router>
-
-                {isBootstraped && apolloClient && (
-                    <ApolloProvider client={apolloClient}>
-                        <Router>
-                            {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
-                            {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
-
-                            {privateRoutes.map(([path, { component: Page }]) => (
-                                <Page key={path} path={path} />
-                            ))}
-                        </Router>
-                    </ApolloProvider>
-                )}
+  return (
+    <>
+      {currentRouteConfig.sidebar && (
+        <SideBar>
+          <SideBarHeader>
+            <Logo style={{ width: '90px', height: '150px' }} />
+          </SideBarHeader>
+          <SideBarContent>
+            <SideBarItem icon="calendar" label="Bookings" path="/calendar" />
+            <SideBarItem icon="profile" label="Profile" path="/profile" />
+          </SideBarContent>
+          <SideBarFooter>
+            <Box display="flex" justifyContent="center">
+              <Button className="log-out-item" size="small" onClick={handleLogout}>
+                <Box mr={1} display="inline-flex">
+                  <LogOut size="14" className="log-out-icon" color="#2D6455" />
+                </Box>
+                <span>Log out</span>
+              </Button>
             </Box>
-        </>
-    );
+          </SideBarFooter>
+        </SideBar>
+      )}
+
+      <Box bgcolor="gray.bg" marginLeft={currentRouteConfig.sidebar ? '150px' : 0}>
+        <Router>
+          {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+          {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+
+          {publicRoutes.map(([path, { component: Page }]) => (
+            <Page key={path} path={path} />
+          ))}
+        </Router>
+
+        {isBootstraped && apolloClient && (
+          <ApolloProvider client={apolloClient}>
+            <Router>
+              {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+              {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+
+              {privateRoutes.map(([path, { component: Page }]) => (
+                <Page key={path} path={path} />
+              ))}
+            </Router>
+          </ApolloProvider>
+        )}
+      </Box>
+    </>
+  );
 });
 
 function App() {
-    return (
-        <LocationProvider>
-            <ThemeProvider theme={{ ...theme }}>
-                <MuiPickersUtilsProvider utils={MomentUtils}>
-                    <Shell />
-                </MuiPickersUtilsProvider>
-            </ThemeProvider>
-        </LocationProvider>
-    );
+  return (
+    <LocationProvider>
+      <ThemeProvider theme={{ ...theme }}>
+        <MuiPickersUtilsProvider utils={MomentUtils}>
+          <Shell />
+        </MuiPickersUtilsProvider>
+      </ThemeProvider>
+    </LocationProvider>
+  );
 }
 
 export default App;

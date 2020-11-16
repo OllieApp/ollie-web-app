@@ -2,11 +2,11 @@ import { createContext } from 'react';
 import UserStore from './user-store';
 
 export class RootStore {
-    userStore: UserStore;
+  userStore: UserStore;
 
-    constructor() {
-        this.userStore = new UserStore(this);
-    }
+  constructor() {
+    this.userStore = new UserStore(this);
+  }
 }
 
 const rootStoreContext = createContext(new RootStore());
