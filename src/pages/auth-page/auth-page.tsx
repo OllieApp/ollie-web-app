@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
-import { Link, RouteComponentProps } from '@reach/router';
+import React from 'react';
+import { Link } from '@reach/router';
 import { Box, makeStyles, Typography, Button, Grid } from '@material-ui/core';
 import logo from '../../logo.svg';
-import { useRootStore } from '../../common/stores';
 
 const useStyles = makeStyles({
     logo: {
@@ -11,13 +10,8 @@ const useStyles = makeStyles({
     },
 });
 
-export function AuthPage({ navigate }: RouteComponentProps) {
+export function AuthPage() {
     const styles = useStyles();
-    const { userStore } = useRootStore();
-
-    useEffect(() => {
-        if (userStore.isAuthenticated && navigate) navigate('/');
-    }, [userStore.isAuthenticated, navigate]);
 
     return (
         <Box width={1} height="100vh" display="flex" alignItems="center" justifyContent="center" bgcolor="primary.main">

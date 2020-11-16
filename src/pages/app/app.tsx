@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
+import { ApolloProvider } from '@apollo/client';
 import Box from '@material-ui/core/Box';
 import MomentUtils from '@date-io/moment';
 import { Router, Redirect, LocationProvider, useLocation, useNavigate } from '@reach/router';
@@ -14,20 +15,50 @@ import { SideBarHeader } from '../../components/side-nav-bar/side-bar-header/sid
 // import { SettingsPage } from '../settings-page/settings-page';
 import { ReactComponent as Logo } from '../../images/ollie_ears_w_text.svg';
 import { theme } from '../../common/theming/theming';
-import './app.scss';
 import { useRootStore } from '../../common/stores';
 import { routes, getCurrentRouteConfig } from './routes';
+import { useApolloClient } from '../../common/apollo';
+import './app.scss';
+
+const routeConfigs = Object.entries(routes);
+const publicRoutes = routeConfigs.filter(([, config]) => config.public);
+const privateRoutes = routeConfigs.filter(([, config]) => !config.public);
 
 const Shell = observer(() => {
     const { userStore } = useRootStore();
+
+    const {
+        isAuthenticated,
+        isLoadingAuth,
+        isLoadingPractitionerInfo,
+        authStatus,
+        authToken,
+        practitionerInfo,
+    } = userStore;
+
     const navigate = useNavigate();
     const location = useLocation();
     const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);
+    const apolloClient = useApolloClient(authToken);
+
+    const isBootstraped = useMemo<boolean>(
+        () => Boolean(isAuthenticated && userStore.practitionerInfo && apolloClient),
+        [isAuthenticated, userStore.practitionerInfo, apolloClient],
+    );
 
     useEffect(() => {
-        if (!userStore.isAuthenticated && !currentRouteConfig.public) navigate('/auth');
-        else if (!userStore.practitionerInfo && !userStore.isLoadingUserInfo) userStore.fetchUserInfo();
-    }, [userStore.isAuthenticated, currentRouteConfig, navigate]);
+        if (authStatus === 'in' && !practitionerInfo && !isLoadingPractitionerInfo) {
+            userStore.fetchUserInfo();
+        }
+    }, [authStatus, practitionerInfo, isLoadingPractitionerInfo, userStore]);
+
+    useEffect(() => {
+        if (currentRouteConfig.public === false && !isAuthenticated && !isLoadingAuth) {
+            navigate('/auth');
+        } else if (location.pathname !== '/signup' && currentRouteConfig.public && isAuthenticated && !isLoadingAuth) {
+            navigate('/calendar');
+        }
+    }, [isAuthenticated, isLoadingAuth, currentRouteConfig, navigate, location]);
 
     const handleLogout = () => userStore.logout();
 
@@ -54,13 +85,29 @@ const Shell = observer(() => {
                     </SideBarFooter>
                 </SideBar>
             )}
+
             <Box bgcolor="gray.bg" marginLeft={currentRouteConfig.sidebar ? '150px' : 0}>
                 <Router>
-                    <Redirect from="/" to="/calendar" noThrow />
-                    {Object.entries(routes).map(([path, { component: Page }]) => (
+                    {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+                    {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+
+                    {publicRoutes.map(([path, { component: Page }]) => (
                         <Page key={path} path={path} />
                     ))}
                 </Router>
+
+                {isBootstraped && apolloClient && (
+                    <ApolloProvider client={apolloClient}>
+                        <Router>
+                            {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+                            {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+
+                            {privateRoutes.map(([path, { component: Page }]) => (
+                                <Page key={path} path={path} />
+                            ))}
+                        </Router>
+                    </ApolloProvider>
+                )}
             </Box>
         </>
     );
@@ -68,13 +115,13 @@ const Shell = observer(() => {
 
 function App() {
     return (
-        <ThemeProvider theme={{ ...theme }}>
-            <MuiPickersUtilsProvider utils={MomentUtils}>
-                <LocationProvider>
+        <LocationProvider>
+            <ThemeProvider theme={{ ...theme }}>
+                <MuiPickersUtilsProvider utils={MomentUtils}>
                     <Shell />
-                </LocationProvider>
-            </MuiPickersUtilsProvider>
-        </ThemeProvider>
+                </MuiPickersUtilsProvider>
+            </ThemeProvider>
+        </LocationProvider>
     );
 }
 

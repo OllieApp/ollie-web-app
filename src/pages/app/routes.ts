@@ -42,7 +42,7 @@ export const routes: Record<string, AppRoute> = {
     },
     '/signup/success/:name': {
         component: SignUpSuccessPage,
-        public: true,
+        public: false,
         sidebar: false,
     },
 };

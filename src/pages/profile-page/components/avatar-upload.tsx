@@ -83,7 +83,7 @@ export function AvatarUpload({ onSave, onCancel }: Props) {
             // eslint-disable-next-line no-console
             console.error(e);
         }
-    }, [image, croppedAreaPixels, rotation]);
+    }, [image, croppedAreaPixels, rotation, onSave]);
 
     return (
         <Box>
