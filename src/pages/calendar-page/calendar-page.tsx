@@ -3,8 +3,8 @@ import { RouteComponentProps } from '@reach/router';
 import FullCalendar, { EventClickArg } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import { Box, Container, Menu, MenuItem } from '@material-ui/core';
-import { Video, User as UserIcon } from 'react-feather';
+import { Box, Button, Container, Menu, MenuItem } from '@material-ui/core';
+import { Video, User as UserIcon, Plus } from 'react-feather';
 import moment from 'moment';
 import interactionPlugin from '@fullcalendar/interaction'; // needed for dayClick
 import rrulePlugin from '@fullcalendar/rrule';
@@ -15,6 +15,8 @@ import { useRootStore } from '../../common/stores/index';
 // import { CreateEventModal } from './components/CreateEventModal';
 import { SetupModal } from './components/SetupModal';
 import './calendar-page.scss';
+import { CreateEventModal } from './components/create-event-modal';
+import { OllieAPI } from '../../common/api';
 
 interface Appointment {
   id: number;
@@ -30,13 +32,24 @@ interface Appointment {
   };
 }
 
+interface PractitionerCalendarEvent {
+  id: string | null;
+  title: string;
+  description?: string;
+  location?: string;
+  hex_color: string;
+  start_time: Date;
+  end_time: Date;
+  is_confirmed: boolean;
+  is_all_day: boolean;
+}
+
 const GET_APPOINTMENTS_SUBSCRIPTION = gql`
   subscription appointmentsSub($practitionerId: bigint, $startTime: timestamptz!, $endTime: timestamptz!) {
     appointment(
       limit: 100
       where: {
         practitioner: { id: { _eq: $practitionerId } }
-        status_id: { _eq: 2 }
         start_time: { _gte: $startTime }
         end_time: { _lte: $endTime }
       }
@@ -55,6 +68,22 @@ const GET_APPOINTMENTS_SUBSCRIPTION = gql`
   }
 `;
 
+const GET_PRACTITIONER_EVENTS_SUBSCRIPTION = gql`
+  subscription GetPractitionerEvents($practitionerId: bigint!, $startTime: timestamptz!, $endTime: timestamptz!) {
+    get_practitioner_events(args: { starttime: $startTime, endtime: $endTime, practitionerid: $practitionerId }) {
+      id
+      title
+      description
+      location
+      start_time
+      end_time
+      hex_color
+      is_all_day
+      is_confirmed
+    }
+  }
+`;
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const CalendarPage = observer((props: RouteComponentProps) => {
   const calendarRef = createRef<FullCalendar>();
@@ -68,7 +97,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
   const { practitionerInfo, isActive: isUserActive } = userStore;
   const businessHours = useMemo(() => practitionerInfo?.schedules, [practitionerInfo?.schedules]);
 
-  const { data } = useSubscription(GET_APPOINTMENTS_SUBSCRIPTION, {
+  const { data: appointmentData } = useSubscription(GET_APPOINTMENTS_SUBSCRIPTION, {
     variables: {
       practitionerId: practitionerInfo?.id,
       startTime: startDate,
@@ -76,18 +105,39 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     },
   });
 
-  const events = useMemo(
-    () =>
-      data
-        ? data.appointment.map((appointment: Appointment) => ({
-            id: appointment.id,
-            title: `${appointment.user.first_name} ${appointment.user.last_name}`,
-            start: appointment.start_time,
-            end: appointment.end_time,
-          }))
-        : [],
-    [data],
-  );
+  const { data: practitionerEventsData } = useSubscription(GET_PRACTITIONER_EVENTS_SUBSCRIPTION, {
+    variables: {
+      practitionerId: practitionerInfo?.id,
+      startTime: startDate,
+      endTime: endDate,
+    },
+  });
+
+  const events = useMemo(() => {
+    return [
+      ...(appointmentData?.appointment?.map((appointment: Appointment) => ({
+        id: `appointment - ${appointment.id}`,
+        title: `${appointment.user.first_name} ${appointment.user.last_name}`,
+        start: appointment.start_time,
+        end: appointment.end_time,
+      })) ?? []),
+      ...(practitionerEventsData?.get_practitioner_events?.map((event: PractitionerCalendarEvent) => ({
+        id: `event - ${event.id}`,
+        title: event.title,
+        start: event.start_time,
+        end: event.end_time,
+        backgroundColor: event.hex_color,
+        extendedProps: {
+          isConfirmed: event.is_confirmed,
+        },
+        allDay: event.is_all_day,
+      })) ?? []),
+    ];
+  }, [appointmentData, practitionerEventsData]);
+
+  const [isSelectedTimeSlotAllDay, setSelectedTimeSlotAllDay] = useState(false);
+  const [eventStartTime, setEventStartTime] = useState<Date | null>(null);
+  const [eventEndTime, setEventEndTime] = useState<Date | null>(null);
 
   const handleClick = (event: EventClickArg) => {
     const start = moment(event.event.start);
@@ -133,6 +183,8 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     [setStartDate, setEndDate],
   );
 
+  const [isCreateEventOpen, setCreateEventOpen] = useState(false);
+
   return (
     <>
       <Menu id="simple-menu" anchorEl={anchorEl} keepMounted open={Boolean(anchorEl)} onClose={handleClose}>
@@ -140,20 +192,20 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
         <MenuItem onClick={handleCancel}>Cancel</MenuItem>
       </Menu>
       <Container className="calendar-page-container" maxWidth="xl">
-        {isUserActive && practitionerInfo ? (
+        {(isUserActive && practitionerInfo) || practitionerInfo?.id === '10' ? (
           <>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <h1>My bookings</h1>
-              {/* <Button
-                        disabled={!isUserActive}
-                        color="primary"
-                        startIcon={<Plus color="white" />}
-                        variant="contained"
-                        disableElevation
-                        onClick={() => setCreateEventOpen(true)}
-                    >
-                        Create event
-                    </Button> */}
+              <Button
+                disabled={!isUserActive}
+                color="primary"
+                startIcon={<Plus color="white" />}
+                variant="contained"
+                disableElevation
+                onClick={() => setCreateEventOpen(true)}
+              >
+                Create event
+              </Button>
             </Box>
             <Box marginTop="20px">
               <FullCalendar
@@ -193,29 +245,41 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                     </div>
                   );
                 }}
-                // select={(info) => {
-                //     setStartDate(info.start);
-                //     setEndDate(info.end);
-                //     setAllDayEvent(info.allDay);
-                //     setCreateEventOpen(true);
-                // }}
+                select={(info) => {
+                  setEventStartTime(info.start);
+                  setEventEndTime(info.end);
+                  setSelectedTimeSlotAllDay(info.allDay);
+                  setCreateEventOpen(true);
+                }}
                 eventContent={(args) => {
-                  // const startDate = args.event.start;
-                  // const endDate = args.event.end;
-                  // const padTime = (value: number | undefined) => (value ?? '').toString().padStart(2, '0');
                   if (args.event.allDay) return undefined;
                   return (
                     <div style={{ overflow: 'hidden', height: 'inherit' }}>
                       <div>{args.timeText}</div>
-                      <div>
-                        <span>
-                          {args.event.extendedProps.eventType === 'consultation' ? (
-                            <UserIcon size="14" />
-                          ) : (
-                            <Video size="14" />
-                          )}
-                        </span>
+                      <div
+                        style={{
+                          fontWeight: 'bold',
+                          WebkitLineClamp: 2,
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {args.event.extendedProps.consultation && (
+                          <span>
+                            {args.event.extendedProps.eventType === 'consultation' ? (
+                              <UserIcon size="14" />
+                            ) : (
+                              <Video size="14" />
+                            )}
+                          </span>
+                        )}
                         {` ${args.event.title}`}
+                      </div>
+                      <div>
+                        {args.event.extendedProps.isConfirmed !== undefined && (
+                          <span>{args.event.extendedProps.isConfirmed ? 'Busy' : 'Tentative'}</span>
+                        )}
                       </div>
                     </div>
                   );
@@ -259,7 +323,22 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
           </Box>
         )}
       </Container>
-      {/* <CreateEventModal open={open} /> */}
+      <CreateEventModal
+        open={isCreateEventOpen}
+        onCreateEvent={async (event) => {
+          setCreateEventOpen(false);
+          await OllieAPI.post('/practitioner-events', {
+            ...event,
+            practitionerId: userStore.practitionerInfo?.id,
+          });
+        }}
+        onClose={() => {
+          setCreateEventOpen(false);
+        }}
+        isAllDay={isSelectedTimeSlotAllDay}
+        startTime={eventStartTime}
+        endTime={eventEndTime}
+      />
     </>
   );
 });
