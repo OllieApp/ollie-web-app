@@ -26,15 +26,7 @@ const privateRoutes = routeConfigs.filter(([, config]) => !config.public);
 
 const Shell = observer(() => {
   const { userStore } = useRootStore();
-
-  const {
-    isAuthenticated,
-    isLoadingAuth,
-    isLoadingPractitionerInfo,
-    authStatus,
-    authToken,
-    practitionerInfo,
-  } = userStore;
+  const { isAuthenticated, isLoadingAuth, authStatus, authToken } = userStore;
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,10 +40,8 @@ const Shell = observer(() => {
   ]);
 
   useEffect(() => {
-    if (authStatus === 'in' && !practitionerInfo && !isLoadingPractitionerInfo) {
-      userStore.fetchUserInfo();
-    }
-  }, [authStatus, practitionerInfo, isLoadingPractitionerInfo, userStore]);
+    userStore.validateAuth();
+  }, []);
 
   useEffect(() => {
     if (currentRouteConfig.public === false && !isAuthenticated && !isLoadingAuth) {
