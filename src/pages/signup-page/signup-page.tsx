@@ -13,34 +13,6 @@ import { PasswordStep } from './components/password-step';
 import { useRootStore } from '../../common/stores';
 import { AuthUser } from '../../types';
 
-const steps = [
-  {
-    key: 'category',
-    component: CategoryStep,
-    fields: ['category'],
-  },
-  {
-    key: 'name',
-    component: NameStep,
-    fields: ['firstName', 'lastName'],
-  },
-  {
-    key: 'gender',
-    component: GenderStep,
-    fields: ['gender'],
-  },
-  {
-    key: 'email',
-    component: EmailStep,
-    fields: ['email'],
-  },
-  {
-    key: 'password',
-    component: PasswordStep,
-    fields: ['password'],
-  },
-] as StepConfig[];
-
 const initialValues: AuthUser = {
   firstName: '',
   lastName: '',
@@ -50,20 +22,13 @@ const initialValues: AuthUser = {
   gender: null!,
 };
 
-const validationSchema = yup.object().shape<AuthUser>({
-  firstName: yup.string().required('first name is a required field'),
-  lastName: yup.string().required('last name is a required field'),
-  email: yup.string().email().required(),
-  password: yup
-    .string()
-    .required()
-    .matches(
-      /^.*(?=.{8,})((?=.*[!@#$%^&*()\-_=+{};:,<.>]){1})(?=.*\d)((?=.*[a-z]){1})((?=.*[A-Z]){1}).*$/,
-      'Password must contain at least 8 characters, one uppercase, one number, and one special case character',
-    ),
-  category: yup.number().required(),
-  gender: yup.number().required(),
-});
+const emailRule = yup.string().email();
+const passwordRule = yup
+  .string()
+  .matches(
+    /^.*(?=.{8,})((?=.*[!@#$%^&*()\-_=+{};:,<.>]){1})(?=.*\d)((?=.*[a-z]){1})((?=.*[A-Z]){1}).*$/,
+    'Password must contain at least 8 characters, one uppercase, one number, and one special case character',
+  );
 
 const useStyles = makeStyles({
   progressBar: {
@@ -73,15 +38,48 @@ const useStyles = makeStyles({
 
 export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
   const { userStore } = useRootStore();
+  const { firebaseUser } = userStore;
   const styles = useStyles();
-
   const [currentStep, setCurrentStep] = useState<number>(0);
+
+  const validationSchema = useMemo(
+    () =>
+      yup.object().shape<AuthUser>({
+        firstName: yup.string().required('first name is a required field'),
+        lastName: yup.string().required('last name is a required field'),
+        email: userStore.authMethod === 'email' ? emailRule.required() : emailRule,
+        password: userStore.authMethod === 'email' ? passwordRule.required() : passwordRule,
+        category: yup.number().required(),
+        gender: yup.number().required(),
+      }),
+    [userStore.authMethod],
+  );
+
+  const currentUserName = useMemo(() => firebaseUser?.displayName, [firebaseUser]);
+  const currentFirstName = useMemo(() => currentUserName?.split(' ')[0], [currentUserName]);
+  const currentLastName = useMemo(() => {
+    if (!currentUserName) return null;
+    const [, ...rest] = currentUserName.split(' ');
+    return rest.join(' ');
+  }, [currentUserName]);
+
   const form = useFormik<AuthUser>({
-    initialValues,
+    initialValues: {
+      ...initialValues,
+      firstName: currentFirstName || '',
+      lastName: currentLastName || '',
+    },
     validationSchema,
     onSubmit: async (userData) => {
+      console.log(userData);
+
       try {
-        await userStore.signUpWithEmail(userData);
+        if (userStore.authMethod === 'email') {
+          await userStore.signUpWithEmail(userData);
+        } else {
+          await userStore.signUp(userData);
+        }
+
         if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
       } catch (ex) {
         await userStore.logout();
@@ -93,10 +91,46 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     },
   });
 
-  const currentStepConfig = useMemo(() => steps[currentStep], [currentStep]);
-  const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [currentStep]);
+  const steps = useMemo(
+    () =>
+      [
+        {
+          key: 'category',
+          component: CategoryStep,
+          fields: ['category'],
+        },
+        {
+          key: 'name',
+          component: NameStep,
+          fields: ['firstName', 'lastName'],
+        },
+        {
+          key: 'gender',
+          component: GenderStep,
+          fields: ['gender'],
+        },
+        ...(userStore.authMethod === 'email'
+          ? [
+              {
+                key: 'email',
+                component: EmailStep,
+                fields: ['email'],
+              },
+              {
+                key: 'password',
+                component: PasswordStep,
+                fields: ['password'],
+              },
+            ]
+          : []),
+      ] as StepConfig[],
+    [userStore.authMethod],
+  );
+
+  const currentStepConfig = useMemo(() => steps[currentStep], [currentStep, steps]);
+  const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [currentStep, steps.length]);
   const hasPrevStep = useMemo(() => currentStep > 0, [currentStep]);
-  const isLastStep = useMemo(() => currentStep === 4, [currentStep]);
+  const isLastStep = useMemo(() => currentStep === steps.length - 1, [currentStep]);
   const StepView = useMemo(() => currentStepConfig.component, [currentStepConfig]);
 
   const isCurrentStepValid = useMemo(
@@ -121,6 +155,7 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     }
 
     if (isLastStep) {
+      console.log(form);
       form.handleSubmit();
     } else {
       setCurrentStep(currentStep + 1);

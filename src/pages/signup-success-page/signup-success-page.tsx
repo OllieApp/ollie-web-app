@@ -42,7 +42,7 @@ export function SignUpSuccessPage(props: RouteComponentProps) {
               </Link>
             </Grid>
             <Grid item xs>
-              <Link to="/login">
+              <Link to="/">
                 <Button variant="contained" color="primary" size="large" fullWidth>
                   let's go
                 </Button>
