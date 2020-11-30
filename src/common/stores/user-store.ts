@@ -10,6 +10,8 @@ export default class UserStore {
 
   @observable authStatus: 'in' | 'out' | 'loading' = 'out';
 
+  @observable authMethod?: 'email' | 'google';
+
   @observable firebaseUser?: firebase.User;
 
   @observable authToken?: string;
@@ -23,6 +25,8 @@ export default class UserStore {
   @observable isLoadingFirebaseUser = true;
 
   @observable isLoadingPractitionerInfo = false;
+
+  @observable userExists = false;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -40,6 +44,114 @@ export default class UserStore {
 
   @computed get isActive(): boolean {
     return this.practitionerInfo?.isActive || false;
+  }
+
+  @computed get isSignUpIncomplete(): boolean {
+    return Boolean(this.firebaseUser && (!this.practitionerIds?.length || !this.user));
+  }
+
+  @action async loginWithEmail({ email, password }: { email: string; password: string }): Promise<void> {
+    this.isLoadingFirebaseUser = true;
+    await auth().signInWithEmailAndPassword(email, password);
+    await this.fetchUserInfo();
+  }
+
+  @action async signUp({ email, firstName, lastName, gender, category }: Partial<AuthUser>): Promise<void> {
+    this.isLoadingPractitionerInfo = true;
+
+    await OllieAPI.post('/practitioners', {
+      firstName,
+      lastName,
+      email: email || this.firebaseUser?.email,
+      category,
+      gender,
+    });
+
+    if (this.firebaseUser) {
+      await this.updateFirebaseUser(this.firebaseUser);
+      await this.fetchUserInfo();
+    }
+  }
+
+  @action async signUpWithEmail({ email, password, firstName, lastName, gender, category }: AuthUser): Promise<void> {
+    this.authMethod = 'google';
+    this.isLoadingFirebaseUser = true;
+
+    if (!email || !password) {
+      throw new Error('Missing required email or password');
+    }
+
+    const { user } = await auth().createUserWithEmailAndPassword(email, password);
+    if (!user) throw new Error('Error creating user with email.');
+
+    this.firebaseUser = user;
+    this.isLoadingFirebaseUser = false;
+
+    this.signUp({
+      firstName,
+      lastName,
+      gender,
+      category,
+    });
+  }
+
+  @action async signInWithGoogle() {
+    this.authMethod = 'google';
+    this.isLoadingFirebaseUser = true;
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+
+    const { user } = await auth().signInWithPopup(provider);
+    if (!user) throw new Error('Error creating user with Google.');
+
+    this.firebaseUser = user;
+    this.isLoadingFirebaseUser = false;
+
+    await this.checkUserExistence();
+
+    if (this.userExists) {
+      await this.fetchUserInfo();
+    }
+  }
+
+  @action async logout(): Promise<void> {
+    await auth().signOut();
+    this.user = null;
+    this.practitionerInfo = undefined;
+    this.firebaseUser = undefined;
+  }
+
+  @action async updatePractitionerProfile(data: Partial<Practitioner> & Partial<User>): Promise<void> {
+    if (!this.practitionerIds) return;
+
+    await OllieAPI.patch<Practitioner>(`/practitioners/${this.practitionerIds[0]}`, data);
+    await this.fetchUserInfo();
+  }
+
+  @action async uploadAvatar(file: File): Promise<void> {
+    if (!this.practitionerIds) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    await OllieAPI.post<Practitioner>(`/practitioners/avatar/${this.practitionerIds[0]}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    await this.fetchUserInfo();
+  }
+
+  @action async cancelAppointment(id: string): Promise<void> {
+    if (!this.practitionerIds) return;
+
+    await OllieAPI.post(`/appointments/${id}/cancel`);
+  }
+
+  @action async validateAuth(): Promise<void> {
+    if (this.authStatus === 'in' && !this.practitionerInfo && !this.isLoadingPractitionerInfo) {
+      await this.fetchUserInfo();
+    }
   }
 
   async updateFirebaseUser(user: firebase.User | null) {
@@ -76,44 +188,22 @@ export default class UserStore {
     this.isLoadingFirebaseUser = false;
   }
 
-  @action async loginWithEmail({ email, password }: { email: string; password: string }): Promise<void> {
-    this.isLoadingFirebaseUser = true;
-    await auth().signInWithEmailAndPassword(email, password);
-    await this.fetchUserInfo();
+  async checkUserExistence(): Promise<void> {
+    if (!this.firebaseUser) return;
+
+    await OllieAPI.get<User>(`/users`)
+      .then(() => {
+        this.userExists = true;
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
-  @action async signUpWithEmail({ email, password, firstName, lastName, gender, category }: AuthUser): Promise<void> {
-    this.isLoadingFirebaseUser = true;
-    this.isLoadingPractitionerInfo = true;
-
-    const { user } = await auth().createUserWithEmailAndPassword(email, password);
-    if (!user) throw new Error('Error creating user with email.');
-
-    await OllieAPI.post('/practitioners', {
-      firstName,
-      lastName,
-      email,
-      category,
-      gender,
-    });
-
-    await this.updateFirebaseUser(user);
-    await this.fetchUserInfo();
-  }
-
-  @action async logout(): Promise<void> {
-    await auth().signOut();
-    this.user = null;
-    this.practitionerInfo = undefined;
-    this.firebaseUser = undefined;
-  }
-
-  @action async fetchUserInfo(): Promise<void> {
+  async fetchPractitionerInfo(): Promise<void> {
     if (!this.firebaseUser) return;
 
     this.isLoadingPractitionerInfo = true;
-
-    const { data: user } = await OllieAPI.get<User>(`/users`);
 
     const {
       data: { ids },
@@ -121,35 +211,18 @@ export default class UserStore {
 
     const { data: practitioner } = await OllieAPI.get(`/practitioners/${ids[0]}`);
 
-    this.user = user as User;
     this.practitionerIds = ids;
     this.practitionerInfo = practitioner as Practitioner;
     this.isLoadingPractitionerInfo = false;
   }
 
-  @action async updatePractitionerProfile(data: Partial<Practitioner> & Partial<User>): Promise<void> {
-    if (!this.practitionerIds) return;
+  async fetchUserInfo(): Promise<void> {
+    if (!this.firebaseUser) return;
 
-    await OllieAPI.patch<Practitioner>(`/practitioners/${this.practitionerIds[0]}`, data);
-    await this.fetchUserInfo();
-  }
+    const { data: user } = await OllieAPI.get<User>(`/users`);
 
-  @action async uploadAvatar(file: File): Promise<void> {
-    if (!this.practitionerIds) return;
+    this.user = user as User;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    await OllieAPI.post<Practitioner>(`/practitioners/avatar/${this.practitionerIds[0]}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-
-    await this.fetchUserInfo();
-  }
-
-  @action async cancelAppointment(id: string): Promise<void> {
-    if (!this.practitionerIds) return;
-
-    await OllieAPI.post(`/appointments/${id}/cancel`);
+    await this.fetchPractitionerInfo();
   }
 }
