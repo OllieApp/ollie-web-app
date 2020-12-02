@@ -6,7 +6,10 @@
     "rewrites": [
       {
         "source": "**",
-        "destination": "/index.html",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/app/**",
         "dynamicLinks": true
       }
     ]
