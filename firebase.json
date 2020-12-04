@@ -5,7 +5,7 @@
     "appAssociation": "AUTO",
     "rewrites": [
       {
-        "source": "**",
+        "source": "!/app/**",
         "destination": "/index.html"
       },
       {
