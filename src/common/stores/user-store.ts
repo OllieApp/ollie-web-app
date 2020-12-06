@@ -53,6 +53,7 @@ export default class UserStore {
   @action async loginWithEmail({ email, password }: { email: string; password: string }): Promise<void> {
     this.isLoadingFirebaseUser = true;
     await auth().signInWithEmailAndPassword(email, password);
+    this.isLoadingFirebaseUser = false;
     await this.fetchUserInfo();
   }
 
@@ -191,13 +192,11 @@ export default class UserStore {
   async checkUserExistence(): Promise<void> {
     if (!this.firebaseUser) return;
 
-    await OllieAPI.get<User>(`/users`)
-      .then(() => {
-        this.userExists = true;
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    const user = await OllieAPI.get<User>(`/users`);
+
+    if (user) {
+      this.userExists = true;
+    }
   }
 
   async fetchPractitionerInfo(): Promise<void> {
@@ -210,7 +209,6 @@ export default class UserStore {
     } = await OllieAPI.get<{ ids: string[] }>(`/practitioners`);
 
     const { data: practitioner } = await OllieAPI.get(`/practitioners/${ids[0]}`);
-
     this.practitionerIds = ids;
     this.practitionerInfo = practitioner as Practitioner;
     this.isLoadingPractitionerInfo = false;
