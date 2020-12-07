@@ -24,6 +24,10 @@ export default class UserStore {
 
   @observable isLoadingFirebaseUser = true;
 
+  @observable isSignInWithEmailAndPasswordLoading = false;
+
+  @observable isSignInWithGoogleLoading = false;
+
   @observable isLoadingPractitionerInfo = false;
 
   @observable userExists = false;
@@ -46,73 +50,106 @@ export default class UserStore {
     return this.practitionerInfo?.isActive || false;
   }
 
-  @computed get isSignUpIncomplete(): boolean {
-    return Boolean(this.firebaseUser && (!this.practitionerIds?.length || !this.user));
+  @computed get hasPractitionersCreated(): boolean {
+    return Boolean(this.firebaseUser && this.practitionerIds?.length);
   }
 
-  @action async loginWithEmail({ email, password }: { email: string; password: string }): Promise<void> {
-    this.isLoadingFirebaseUser = true;
-    await auth().signInWithEmailAndPassword(email, password);
-    this.isLoadingFirebaseUser = false;
-    await this.fetchUserInfo();
-  }
-
-  @action async signUp({ email, firstName, lastName, gender, category }: Partial<AuthUser>): Promise<void> {
-    this.isLoadingPractitionerInfo = true;
-
-    await OllieAPI.post('/practitioners', {
-      firstName,
-      lastName,
-      email: email || this.firebaseUser?.email,
-      category,
-      gender,
-    });
-
-    if (this.firebaseUser) {
-      await this.updateFirebaseUser(this.firebaseUser);
+  @action async signInWithEmailAndPassword({ email, password }: { email: string; password: string }): Promise<void> {
+    try {
+      this.isSignInWithEmailAndPasswordLoading = true;
+      this.isLoadingFirebaseUser = true;
+      await auth().signInWithEmailAndPassword(email, password);
+      this.isLoadingFirebaseUser = false;
       await this.fetchUserInfo();
+      this.isSignInWithEmailAndPasswordLoading = false;
+    } catch (ex) {
+      this.isSignInWithEmailAndPasswordLoading = false;
+      throw ex;
     }
   }
 
-  @action async signUpWithEmail({ email, password, firstName, lastName, gender, category }: AuthUser): Promise<void> {
-    this.authMethod = 'google';
-    this.isLoadingFirebaseUser = true;
+  @action async signUpWithEmail({ email, firstName, lastName, gender, category }: Partial<AuthUser>): Promise<void> {
+    try {
+      this.isLoadingPractitionerInfo = true;
 
-    if (!email || !password) {
-      throw new Error('Missing required email or password');
+      await OllieAPI.post('/practitioners', {
+        firstName,
+        lastName,
+        email: email || this.firebaseUser?.email,
+        category,
+        gender,
+      });
+
+      if (this.firebaseUser) {
+        await this.updateFirebaseUser(this.firebaseUser);
+        await this.fetchUserInfo();
+      }
+    } catch (ex) {
+      this.isLoadingPractitionerInfo = false;
+      throw ex;
     }
+  }
 
-    const { user } = await auth().createUserWithEmailAndPassword(email, password);
-    if (!user) throw new Error('Error creating user with email.');
+  @action async signUpWithEmailAndPassword({
+    email,
+    password,
+    firstName,
+    lastName,
+    gender,
+    category,
+  }: AuthUser): Promise<void> {
+    try {
+      this.authMethod = 'google';
+      this.isLoadingFirebaseUser = true;
 
-    this.firebaseUser = user;
-    this.isLoadingFirebaseUser = false;
+      if (!email || !password) {
+        throw new Error('Missing required email or password');
+      }
 
-    this.signUp({
-      firstName,
-      lastName,
-      gender,
-      category,
-    });
+      const { user } = await auth().createUserWithEmailAndPassword(email, password);
+      if (!user) throw new Error('Error creating user with email.');
+
+      this.firebaseUser = user;
+      this.isLoadingFirebaseUser = false;
+
+      this.signUpWithEmail({
+        firstName,
+        lastName,
+        gender,
+        category,
+      });
+    } catch (ex) {
+      this.isLoadingFirebaseUser = false;
+      throw ex;
+    }
   }
 
   @action async signInWithGoogle() {
-    this.authMethod = 'google';
-    this.isLoadingFirebaseUser = true;
+    try {
+      this.authMethod = 'google';
+      this.isSignInWithGoogleLoading = true;
+      this.isLoadingFirebaseUser = true;
 
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/userinfo.email');
 
-    const { user } = await auth().signInWithPopup(provider);
-    if (!user) throw new Error('Error creating user with Google.');
+      const { user } = await auth().signInWithPopup(provider);
+      if (!user) throw new Error('Error creating user with Google.');
 
-    this.firebaseUser = user;
-    this.isLoadingFirebaseUser = false;
+      this.firebaseUser = user;
+      this.isLoadingFirebaseUser = false;
 
-    await this.checkUserExistence();
+      await this.checkUserExistence();
 
-    if (this.userExists) {
-      await this.fetchUserInfo();
+      if (this.userExists) {
+        await this.fetchUserInfo();
+      }
+
+      this.isSignInWithGoogleLoading = false;
+    } catch (ex) {
+      this.isSignInWithGoogleLoading = false;
+      this.isLoadingFirebaseUser = false;
+      throw ex;
     }
   }
 

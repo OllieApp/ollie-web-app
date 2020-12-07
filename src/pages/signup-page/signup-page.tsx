@@ -71,13 +71,11 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     },
     validationSchema,
     onSubmit: async (userData) => {
-      console.log(userData);
-
       try {
         if (userStore.authMethod === 'email') {
-          await userStore.signUpWithEmail(userData);
+          await userStore.signUpWithEmailAndPassword(userData);
         } else {
-          await userStore.signUp(userData);
+          await userStore.signUpWithEmail(userData);
         }
 
         if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
@@ -130,7 +128,7 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
   const currentStepConfig = useMemo(() => steps[currentStep], [currentStep, steps]);
   const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [currentStep, steps.length]);
   const hasPrevStep = useMemo(() => currentStep > 0, [currentStep]);
-  const isLastStep = useMemo(() => currentStep === steps.length - 1, [currentStep]);
+  const isLastStep = useMemo(() => currentStep === steps.length - 1, [currentStep, steps.length]);
   const StepView = useMemo(() => currentStepConfig.component, [currentStepConfig]);
 
   const isCurrentStepValid = useMemo(
@@ -155,7 +153,6 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     }
 
     if (isLastStep) {
-      console.log(form);
       form.handleSubmit();
     } else {
       setCurrentStep(currentStep + 1);

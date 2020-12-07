@@ -11,7 +11,7 @@ import { useRootStore } from '../../common/stores';
 import { theme } from '../../common/theming/theming';
 
 interface GoogleButtonProps extends ButtonProps {
-  isLoading?: boolean;
+  loading?: boolean;
 }
 
 const useStyles = makeStyles({
@@ -38,7 +38,7 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
     },
     onSubmit: async ({ email, password }) => {
       try {
-        await userStore.loginWithEmail({ email, password });
+        await userStore.signInWithEmailAndPassword({ email, password });
       } catch (ex) {
         // eslint-disable-next-line no-alert
         alert(ex.message);
@@ -50,7 +50,7 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
   const handleGoogleAuth = useCallback(
     () =>
       userStore.signInWithGoogle().then(() => {
-        if (userStore.isSignUpIncomplete && navigate) {
+        if (!userStore.hasPractitionersCreated && navigate) {
           navigate('/signup');
         }
       }),
@@ -104,10 +104,10 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
                 variant="contained"
                 size="large"
                 color="primary"
-                disabled={userStore.isLoadingAuth}
+                disabled={userStore.isSignInWithEmailAndPasswordLoading || userStore.isSignInWithGoogleLoading}
                 fullWidth
               >
-                {userStore.isLoadingAuth && (
+                {userStore.isSignInWithEmailAndPasswordLoading && (
                   <Box mr={1} display="inline-flex">
                     <CircularProgress size="1em" />
                   </Box>
@@ -132,7 +132,12 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
             </Box>
 
             <Box width="100%">
-              <GoogleButton size="large" isLoading={userStore.isLoadingAuth} onClick={handleGoogleAuth} />
+              <GoogleButton
+                size="large"
+                loading={userStore.isSignInWithGoogleLoading}
+                disabled={userStore.isSignInWithEmailAndPasswordLoading || userStore.isSignInWithGoogleLoading}
+                onClick={handleGoogleAuth}
+              />
             </Box>
 
             <Box width="100%" textAlign="center" fontWeight="bold" fontSize={14} mt={4}>
@@ -156,9 +161,9 @@ const GoogleButton = withStyles({
       boxShadow: 'none !important',
     },
   },
-})(({ isLoading, ...props }: GoogleButtonProps) => (
-  <Button {...props} type="button" variant="contained" fullWidth>
-    {isLoading ? (
+})(({ loading, disabled, ...props }: GoogleButtonProps) => (
+  <Button {...props} type="button" variant="contained" disabled={loading || disabled} fullWidth>
+    {loading ? (
       <Box mr={1} display="inline-flex">
         <CircularProgress size="1em" />
       </Box>
