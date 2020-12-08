@@ -227,12 +227,20 @@ export default class UserStore {
   }
 
   async checkUserExistence(): Promise<void> {
-    if (!this.firebaseUser) return;
+    if (!this.firebaseUser) {
+      this.userExists = false;
+      return;
+    }
 
-    const user = await OllieAPI.get<User>(`/users`);
-
-    if (user) {
+    try {
+      await OllieAPI.get<User>(`/users`);
       this.userExists = true;
+    } catch (ex) {
+      if (ex.response?.status === 404) {
+        this.userExists = false;
+      } else {
+        throw ex;
+      }
     }
   }
 
