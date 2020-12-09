@@ -205,7 +205,13 @@ export default class UserStore {
   @action async cancelAppointment(id: string): Promise<void> {
     if (!this.practitionerIds) return;
 
-    await OllieAPI.post(`/appointments/${id}/cancel`);
+    await OllieAPI.post(`/appointments/${id}/cancel`, {
+      // FIXME
+      // eslint-disable-next-line no-alert
+      cancellationReason: prompt(
+        `${this.practitionerInfo?.title} in order to cancel this event, you will need to provide a simple reason for this cancellation. This will not be shared with any patients. (min. 40 characters)`,
+      ),
+    });
   }
 
   async watchToken() {
