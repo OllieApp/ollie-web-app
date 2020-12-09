@@ -34,7 +34,7 @@ export const routes: Record<string, AppRoute> = {
     public: true,
     sidebar: false,
   },
-  '/signup/success/:name': {
+  '/signup/success/:title': {
     component: SignUpSuccessPage,
     public: false,
     sidebar: false,

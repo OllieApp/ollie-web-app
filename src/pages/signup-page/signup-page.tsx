@@ -80,7 +80,7 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
           await userStore.signUpWithEmailAndPassword(userData);
         }
 
-        if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
+        if (navigate) navigate(`/signup/success/${userStore.practitionerInfo?.title}`, {});
       } catch (ex) {
         if (ex.message) enqueueSnackbar(ex.message);
         // TODO: Report
