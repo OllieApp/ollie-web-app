@@ -226,7 +226,6 @@ export default class UserStore {
       await OllieAPI.get<User>(`/users`);
       this.userExists = true;
     } catch (ex) {
-      console.log(ex.response?.status);
       if (ex.response?.status === 404) {
         this.userExists = false;
       } else {
