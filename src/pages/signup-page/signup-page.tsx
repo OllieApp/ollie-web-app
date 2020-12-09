@@ -4,6 +4,7 @@ import { observer } from 'mobx-react';
 import { Box, Button, CircularProgress, makeStyles } from '@material-ui/core';
 import { RouteComponentProps } from '@reach/router';
 import { FormikProvider, Form, useFormik } from 'formik';
+import { useSnackbar } from 'notistack';
 import { CategoryStep } from './components/category-step';
 import { NameStep } from './components/name-step';
 import { GenderStep } from './components/gender-step';
@@ -37,9 +38,10 @@ const useStyles = makeStyles({
 });
 
 export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
-  const { userStore } = useRootStore();
-  const { firebaseUser } = userStore;
   const styles = useStyles();
+  const { enqueueSnackbar } = useSnackbar();
+  const { userStore } = useRootStore();
+  const { isCommingFromGAuth, firebaseUser } = userStore;
   const [currentStep, setCurrentStep] = useState<number>(0);
 
   const validationSchema = useMemo(
@@ -47,8 +49,8 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
       yup.object().shape<AuthUser>({
         firstName: yup.string().required('first name is a required field'),
         lastName: yup.string().required('last name is a required field'),
-        email: userStore.authMethod === 'email' ? emailRule.required() : emailRule,
-        password: userStore.authMethod === 'email' ? passwordRule.required() : passwordRule,
+        email: isCommingFromGAuth ? emailRule : emailRule.required(),
+        password: isCommingFromGAuth ? passwordRule : passwordRule.required(),
         category: yup.number().required(),
         gender: yup.number().required(),
       }),
@@ -72,18 +74,15 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
     validationSchema,
     onSubmit: async (userData) => {
       try {
-        if (userStore.authMethod === 'email') {
-          await userStore.signUpWithEmailAndPassword(userData);
-        } else {
+        if (isCommingFromGAuth) {
           await userStore.signUpWithEmail(userData);
+        } else {
+          await userStore.signUpWithEmailAndPassword(userData);
         }
 
         if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
       } catch (ex) {
-        await userStore.logout();
-        if (navigate) navigate('/signup', {});
-        // eslint-disable-next-line no-alert
-        alert(ex.message);
+        if (ex.message) enqueueSnackbar(ex.message);
         // TODO: Report
       }
     },
@@ -107,8 +106,9 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
           component: GenderStep,
           fields: ['gender'],
         },
-        ...(userStore.authMethod === 'email'
-          ? [
+        ...(isCommingFromGAuth
+          ? []
+          : [
               {
                 key: 'email',
                 component: EmailStep,
@@ -119,8 +119,7 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
                 component: PasswordStep,
                 fields: ['password'],
               },
-            ]
-          : []),
+            ]),
       ] as StepConfig[],
     [userStore.authMethod],
   );
@@ -190,10 +189,10 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
                   color="primary"
                   type="button"
                   onClick={handleNextClick}
-                  disabled={form.isSubmitting}
+                  disabled={userStore.isSignUpWithEmailLoading}
                   fullWidth
                 >
-                  {form.isSubmitting && (
+                  {userStore.isSignUpWithEmailLoading && (
                     <Box mr={1} display="inline-flex">
                       <CircularProgress size="1em" />
                     </Box>

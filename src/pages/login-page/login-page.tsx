@@ -1,10 +1,11 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import * as yup from 'yup';
 import { Link, RouteComponentProps } from '@reach/router';
 import { Box, makeStyles, Typography, Button, Grid, TextField, CircularProgress, ButtonProps } from '@material-ui/core';
 import { useFormik } from 'formik';
 import { observer } from 'mobx-react';
 import { withStyles } from '@material-ui/styles';
+import { useSnackbar } from 'notistack';
 import logo from '../../logo.svg';
 import googleLogo from '../../images/google-logo.svg';
 import { useRootStore } from '../../common/stores';
@@ -27,9 +28,16 @@ const validationSchema = yup.object().shape<{ email: string; password: string }>
 });
 
 export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
+  const { enqueueSnackbar } = useSnackbar();
   const { userStore } = useRootStore();
-
+  const { isSignInWithEmailAndPasswordLoading, isSignInWithGoogleLoading } = userStore;
   const styles = useStyles();
+
+  const isDisabled = useMemo(() => isSignInWithEmailAndPasswordLoading || isSignInWithGoogleLoading, [
+    isSignInWithEmailAndPasswordLoading,
+    isSignInWithGoogleLoading,
+  ]);
+
   const form = useFormik({
     validationSchema,
     initialValues: {
@@ -38,10 +46,11 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
     },
     onSubmit: async ({ email, password }) => {
       try {
-        await userStore.signInWithEmailAndPassword({ email, password });
+        await userStore.signInWithEmailAndPassword({ email, password }).then(() => {
+          if (navigate) navigate('/calendar');
+        });
       } catch (ex) {
-        // eslint-disable-next-line no-alert
-        alert(ex.message);
+        if (ex.message) enqueueSnackbar(ex.message);
         // TODO: Report
       }
     },
@@ -49,11 +58,21 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
 
   const handleGoogleAuth = useCallback(
     () =>
-      userStore.signInWithGoogle().then(() => {
-        if (!userStore.hasPractitionersCreated && navigate) {
-          navigate('/signup');
-        }
-      }),
+      userStore
+        .signInWithGoogle()
+        .then(({ userExists }) => {
+          if (!navigate) throw new Error('Missing "navigate"');
+
+          if (userExists) {
+            navigate('/calendar');
+          } else {
+            navigate('/signup');
+          }
+        })
+        .catch((ex) => {
+          if (ex.message) enqueueSnackbar(ex.message);
+          // TODO: Report
+        }),
     [userStore, navigate],
   );
 
@@ -79,7 +98,7 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
                   error={!!(form.touched.email && form.errors.email)}
                   helperText={form.touched.email ? form.errors.email : ''}
                   onChange={form.handleChange}
-                  onBlur={form.handleBlur}
+                  disabled={isDisabled}
                   autoFocus
                   fullWidth
                 />
@@ -93,20 +112,13 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
                   error={!!(form.touched.password && form.errors.password)}
                   helperText={form.touched.password ? form.errors.password : ''}
                   onChange={form.handleChange}
-                  onBlur={form.handleBlur}
+                  disabled={isDisabled}
                   fullWidth
                 />
               </Grid>
             </Grid>
             <Box width="100%" mt={4}>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                color="primary"
-                disabled={userStore.isSignInWithEmailAndPasswordLoading || userStore.isSignInWithGoogleLoading}
-                fullWidth
-              >
+              <Button type="submit" variant="contained" size="large" color="primary" disabled={isDisabled} fullWidth>
                 {userStore.isSignInWithEmailAndPasswordLoading && (
                   <Box mr={1} display="inline-flex">
                     <CircularProgress size="1em" />
@@ -135,15 +147,14 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
               <GoogleButton
                 size="large"
                 loading={userStore.isSignInWithGoogleLoading}
-                disabled={userStore.isSignInWithEmailAndPasswordLoading || userStore.isSignInWithGoogleLoading}
+                disabled={isDisabled}
                 onClick={handleGoogleAuth}
               />
             </Box>
 
             <Box width="100%" textAlign="center" fontWeight="bold" fontSize={14} mt={4}>
-              You don't have a Ollie account?{' '}
               <Link to="/signup" style={{ color: 'inherit' }}>
-                Create one now.
+                You don't have a Ollie account? Create one now.
               </Link>
             </Box>
           </Box>
