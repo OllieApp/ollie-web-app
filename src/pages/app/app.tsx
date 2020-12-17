@@ -95,7 +95,7 @@ const Shell = observer(() => {
   );
 });
 
-export const Providers = ({ children }: React.PropsWithChildren<{}>) => (
+const Providers = ({ children }: React.PropsWithChildren<{}>) => (
   <LocationProvider>
     <ThemeProvider theme={{ ...theme }}>
       <SnackbarProvider
