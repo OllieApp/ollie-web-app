@@ -1,48 +1,28 @@
-import React, { useState, createRef, useMemo, useCallback } from 'react';
+import React, { useState, createRef, useMemo, useCallback, useEffect } from 'react';
 import { RouteComponentProps } from '@reach/router';
-import FullCalendar, { EventClickArg } from '@fullcalendar/react';
+import { useSnackbar } from 'notistack';
+import Appointment from 'common/gql-types/appointment';
+import PractitionerEvent from 'common/gql-types/practitioner-event';
+import moment from 'moment';
+import FullCalendar, { EventApi, EventClickArg, EventInput } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import { Box, Button, Container, Menu, MenuItem } from '@material-ui/core';
-import { Video, User as UserIcon, Plus } from 'react-feather';
-import moment from 'moment';
-import interactionPlugin from '@fullcalendar/interaction'; // needed for dayClick
+import interactionPlugin from '@fullcalendar/interaction';
 import rrulePlugin from '@fullcalendar/rrule';
-// import { RRule, Frequency } from 'rrule';
+import { Box, Button, Container } from '@material-ui/core';
+import { Video, User as UserIcon, Plus } from 'react-feather';
 import { observer } from 'mobx-react';
-import { gql, useSubscription } from '@apollo/client';
+import { ApolloError, gql, useSubscription } from '@apollo/client';
 import { useRootStore } from '../../common/stores/index';
-// import { CreateEventModal } from './components/CreateEventModal';
 import { SetupModal } from './components/SetupModal';
 import './calendar-page.scss';
 import { CreateEventModal } from './components/create-event-modal';
 import { OllieAPI } from '../../common/api';
-
-interface Appointment {
-  id: number;
-  status_id: number;
-  start_time: string;
-  end_time: string;
-  doctor_video_url: string;
-  is_virtual: boolean;
-  user: {
-    id: number;
-    first_name: string;
-    last_name: string;
-  };
-}
-
-interface PractitionerCalendarEvent {
-  id: string | null;
-  title: string;
-  description?: string;
-  location?: string;
-  hex_color: string;
-  start_time: Date;
-  end_time: Date;
-  is_confirmed: boolean;
-  is_all_day: boolean;
-}
+import { CancelAppointmentModal } from './components/cancel-appointment-modal/cancel-appointment-modal';
+import AppointmentOverviewPopover from './components/appointment-overview-popover/appointment-overview-popover';
+import { PractitionerEventOverviewPopover } from './components/practitioner-event-overview-popover/practitioner-event-overview-popover';
+import { useWindowSize } from '../../common/hooks/use-windows-size';
+import { Point } from './components/shared/point';
 
 const GET_APPOINTMENTS_SUBSCRIPTION = gql`
   subscription appointmentsSub($practitionerId: bigint, $startTime: timestamptz!, $endTime: timestamptz!) {
@@ -63,6 +43,8 @@ const GET_APPOINTMENTS_SUBSCRIPTION = gql`
       user {
         first_name
         last_name
+        phone
+        email
       }
     }
   }
@@ -84,20 +66,24 @@ const GET_PRACTITIONER_EVENTS_SUBSCRIPTION = gql`
   }
 `;
 
+interface EventDetails {
+  popoverPosition: Point;
+  event: EventApi;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const CalendarPage = observer((props: RouteComponentProps) => {
+  const { enqueueSnackbar } = useSnackbar();
   const calendarRef = createRef<FullCalendar>();
-  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  // const open = Boolean(anchorEl);
-  // const id = open ? 'simple-popover' : undefined;
 
   const [startDate, setStartDate] = useState<Date>(null!);
   const [endDate, setEndDate] = useState<Date>(null!);
   const { userStore } = useRootStore();
   const { practitionerInfo, isActive: isUserActive } = userStore;
   const businessHours = useMemo(() => practitionerInfo?.schedules, [practitionerInfo?.schedules]);
+  const [selectedEvent, selectEvent] = useState<EventDetails | null>();
 
-  const { data: appointmentData } = useSubscription(GET_APPOINTMENTS_SUBSCRIPTION, {
+  const { data: appointmentData, error: appSubError } = useSubscription(GET_APPOINTMENTS_SUBSCRIPTION, {
     variables: {
       practitionerId: practitionerInfo?.id,
       startTime: startDate,
@@ -105,7 +91,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     },
   });
 
-  const { data: practitionerEventsData } = useSubscription(GET_PRACTITIONER_EVENTS_SUBSCRIPTION, {
+  const { data: practitionerEventsData, error: pESubError } = useSubscription(GET_PRACTITIONER_EVENTS_SUBSCRIPTION, {
     variables: {
       practitionerId: practitionerInfo?.id,
       startTime: startDate,
@@ -113,22 +99,42 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
     },
   });
 
-  const events = useMemo(() => {
+  const isJWTExpired = (error: ApolloError | undefined): boolean => {
+    return (error && error?.message.includes('JWTExpired')) ?? false;
+  };
+
+  useEffect(() => {
+    (async () => {
+      if (isJWTExpired(appSubError) || isJWTExpired(pESubError)) {
+        await userStore.refreshAuthToken();
+      }
+    })();
+  }, [appSubError, pESubError]);
+
+  const events = useMemo<EventInput>(() => {
     return [
       ...(appointmentData?.appointment?.map((appointment: Appointment) => ({
-        id: `appointment - ${appointment.id}`,
+        id: `appointment-${appointment.id}`,
         title: `${appointment.user.first_name} ${appointment.user.last_name}`,
         start: appointment.start_time,
         end: appointment.end_time,
+        extendedProps: {
+          type: 'appointment',
+          appointment,
+        },
       })) ?? []),
-      ...(practitionerEventsData?.get_practitioner_events?.map((event: PractitionerCalendarEvent) => ({
-        id: `event - ${event.id}`,
+      ...(practitionerEventsData?.get_practitioner_events?.map((event: PractitionerEvent) => ({
+        id: `event-${event.id}`,
         title: event.title,
-        start: event.start_time,
-        end: event.end_time,
+        start: moment(event.start_time).toISOString(true),
+        end: moment(event.end_time).toISOString(true),
         backgroundColor: event.hex_color,
+        borderColor: event.hex_color,
+        textColor: calculateTextColor(event.hex_color),
         extendedProps: {
           isConfirmed: event.is_confirmed,
+          type: 'practitionerEvent',
+          practitionerEvent: event,
         },
         allDay: event.is_all_day,
       })) ?? []),
@@ -138,42 +144,22 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
   const [isSelectedTimeSlotAllDay, setSelectedTimeSlotAllDay] = useState(false);
   const [eventStartTime, setEventStartTime] = useState<Date | null>(null);
   const [eventEndTime, setEventEndTime] = useState<Date | null>(null);
+  const windowSize = useWindowSize();
 
-  const handleClick = (event: EventClickArg) => {
-    const start = moment(event.event.start);
-    start.subtract({ minutes: 30 });
+  const handleEventClick = (eventClick: EventClickArg) => {
+    const { event, jsEvent } = eventClick;
 
-    if (calendarRef.current) {
-      calendarRef.current.getApi().scrollToTime({
-        hour: start.hour(),
-        minute: start.minute(),
-        day: start.day(),
-        month: start.month(),
-        year: start.year(),
-      });
-    }
-
-    const { el } = event;
-    el.dataset.id = event.event.id;
-
-    setAnchorEl(el as HTMLButtonElement);
+    selectEvent({
+      event,
+      popoverPosition: {
+        x: jsEvent.pageX,
+        y: jsEvent.pageY,
+      },
+    });
   };
 
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleCancel = async () => {
-    const info = anchorEl?.dataset.id;
-    if (!info) return;
-
-    const [type, id] = info.split(' - ');
-
-    if (type === 'appointment') {
-      await userStore.cancelAppointment(id);
-    }
-
-    handleClose();
+  const onCloseEvent = () => {
+    selectEvent(null);
   };
 
   const handleDateRangeChange = useCallback(
@@ -185,20 +171,42 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
   );
 
   const [isCreateEventOpen, setCreateEventOpen] = useState(false);
+  const [isCancelAppointmentOpen, setCancelAppointmentDialog] = useState(false);
+
+  const selectedAppointment: Appointment | undefined | null =
+    selectedEvent?.event.extendedProps?.type === 'appointment' && selectedEvent?.event.extendedProps?.appointment;
+  const selectedPractitionerEvent: PractitionerEvent | undefined | null =
+    selectedEvent?.event.extendedProps?.type === 'practitionerEvent' &&
+    selectedEvent?.event.extendedProps?.practitionerEvent;
+
+  useEffect(() => {
+    if (!selectedEvent) {
+      return;
+    }
+    const eventItem = events.find((e: EventInput) => e.id === selectedEvent?.event.id);
+    if (!eventItem) {
+      selectEvent(null);
+    } else {
+      selectEvent({
+        event: eventItem,
+        popoverPosition: selectedEvent.popoverPosition,
+      });
+    }
+  }, [events]);
+
+  useEffect(() => {
+    selectEvent(null);
+  }, [windowSize]);
 
   return (
     <>
-      <Menu id="simple-menu" anchorEl={anchorEl} keepMounted open={Boolean(anchorEl)} onClose={handleClose}>
-        {/* <MenuItem onClick={handleClose}>Edit</MenuItem> */}
-        <MenuItem onClick={handleCancel}>Cancel</MenuItem>
-      </Menu>
       <Container className="calendar-page-container" maxWidth="xl">
         {(isUserActive && practitionerInfo) || practitionerInfo?.id === '10' ? (
           <>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <h1>My bookings</h1>
               <Button
-                disabled={!isUserActive}
+                disabled={userStore.practitionerInfo?.id === '10' ? false : !isUserActive}
                 color="primary"
                 startIcon={<Plus color="white" />}
                 variant="contained"
@@ -228,6 +236,12 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                 slotDuration="00:15:00"
                 slotLabelInterval="01:00:00"
                 snapDuration="00:15:00"
+                eventClassNames={(args) => {
+                  if (args.event.id === selectedEvent?.event.id) {
+                    return 'calendar-event-highlight';
+                  }
+                  return '';
+                }}
                 dayHeaderContent={(args) => {
                   const date = moment(args.date);
                   if (args.view.type !== 'timeGridWeek') return undefined;
@@ -267,12 +281,12 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                           textOverflow: 'ellipsis',
                         }}
                       >
-                        {args.event.extendedProps.consultation && (
+                        {args.event.extendedProps.type === 'appointment' && (
                           <span>
-                            {args.event.extendedProps.eventType === 'consultation' ? (
-                              <UserIcon size="14" />
-                            ) : (
+                            {args.event.extendedProps.appointment.is_virtual ? (
                               <Video size="14" />
+                            ) : (
+                              <UserIcon size="14" />
                             )}
                           </span>
                         )}
@@ -293,7 +307,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                 }}
                 businessHours={businessHours?.filter((x) => x.daysOfWeek)}
                 eventClick={(args) => {
-                  handleClick(args);
+                  handleEventClick(args);
                 }}
                 selectAllow={(selectInfo) => {
                   const currentDate = new Date();
@@ -339,8 +353,90 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
         }}
         isAllDay={isSelectedTimeSlotAllDay}
         startTime={eventStartTime}
-        endTime={eventEndTime}
+        endTime={isSelectedTimeSlotAllDay ? moment(eventEndTime).subtract(1, 'day').toDate() : eventEndTime}
       />
+      {selectedAppointment && (
+        <CancelAppointmentModal
+          onClose={() => setCancelAppointmentDialog(false)}
+          onSubmit={async (cancellationReason) => {
+            setCancelAppointmentDialog(false);
+            if (!selectedEvent || selectedEvent.event?.extendedProps?.type !== 'appointment') {
+              return;
+            }
+            try {
+              const res = await userStore.cancelAppointment(selectedAppointment.id, cancellationReason);
+              if (!res) {
+                enqueueSnackbar('The selected appointment could not be cancelled.', {
+                  persist: true,
+                  variant: 'error',
+                });
+                return;
+              }
+              enqueueSnackbar('Your appointment was cancelled.', {
+                persist: true,
+                variant: 'success',
+              });
+            } catch (error) {
+              if (error.response.status !== 200 && error.response.status !== 204) {
+                if (error.response.status === 500) {
+                  enqueueSnackbar('Something went wrong while trying to cancel your appointment.', {
+                    persist: true,
+                    variant: 'error',
+                  });
+                } else {
+                  enqueueSnackbar(error.response.data.message[0], {
+                    persist: true,
+                    variant: 'error',
+                  });
+                }
+                return;
+              }
+              enqueueSnackbar(
+                `Your appointment with ${selectedAppointment.user.first_name} ${selectedAppointment.user.last_name} was successfully cancelled.`,
+                {
+                  persist: true,
+                  variant: 'error',
+                },
+              );
+            }
+          }}
+          open={isCancelAppointmentOpen}
+          startDate={new Date(selectedAppointment?.start_time ?? '')}
+          userFullName={`${selectedAppointment?.user.first_name} ${selectedAppointment?.user.last_name}`}
+        />
+      )}
+      {selectedAppointment && selectedEvent && (
+        <AppointmentOverviewPopover
+          open={Boolean(selectedEvent && selectedEvent.event?.extendedProps?.type === 'appointment')}
+          position={selectedEvent.popoverPosition}
+          onCancelClick={() => {
+            if (!selectedEvent || selectedEvent.event?.extendedProps.type !== 'appointment') return;
+            setCancelAppointmentDialog(true);
+          }}
+          onClose={onCloseEvent}
+          appointment={selectedAppointment}
+        />
+      )}
+      {selectedPractitionerEvent && selectedEvent && (
+        <PractitionerEventOverviewPopover
+          open={Boolean(selectedEvent && selectedEvent.event?.extendedProps?.type === 'practitionerEvent')}
+          position={selectedEvent.popoverPosition}
+          onClose={onCloseEvent}
+          event={selectedPractitionerEvent}
+        />
+      )}
     </>
   );
 });
+
+function calculateTextColor(backgroundColor: string | undefined): string | undefined {
+  if (!backgroundColor) {
+    return undefined;
+  }
+  const hex = backgroundColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? '#000000' : '#ffffff';
+}

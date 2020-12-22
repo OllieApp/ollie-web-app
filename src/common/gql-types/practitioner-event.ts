@@ -1,4 +1,4 @@
-export interface PractitionerEvent {
+export default interface PractitionerEvent {
   id: string | null;
   title: string;
   description?: string;

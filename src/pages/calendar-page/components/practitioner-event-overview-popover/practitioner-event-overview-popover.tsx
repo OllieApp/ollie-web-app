@@ -1,6 +1,6 @@
 import { Box, Grid, IconButton, Popover, Tooltip, Typography } from '@material-ui/core';
 import { Fullscreen } from '@material-ui/icons';
-import { PractitionerEvent } from 'common/gql-types/practitioner-event';
+import PractitionerEvent from 'common/gql-types/practitioner-event';
 import moment from 'moment';
 import React, { useState, useEffect } from 'react';
 import { Trash2, X, Edit, MapPin, AlignLeft } from 'react-feather';

@@ -44,7 +44,6 @@
     & .fc-button-primary:not(:disabled).fc-button-active {
         background-color: $darkerGray;
         border-color: $darkerGray;
-
     }
 
     .fc-icon {
@@ -106,4 +105,8 @@ div::-webkit-scrollbar-thumb {
         height: 45px;
     }
 
+}
+
+.calendar-event-highlight{
+    box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px, rgba(255, 255, 255, 0.2) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.9) 0px 0px 0px 1px !important;
 }
