@@ -1,0 +1,26 @@
+.appointment-overview-card{
+    width: 230px;
+    padding: 10px 10px 17px 10px;
+}
+
+.divider-margin{
+    margin: 10px 0px !important;
+}
+
+.button-padding{
+    padding: 8px !important;
+}
+
+.copy-button{
+    padding: 4px !important;
+    margin-left: 4px !important;
+}
+
+.space-limited-text-container{
+    max-width: 195px;
+
+    p, h1, h2, h3, h4, h5, h6 {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
