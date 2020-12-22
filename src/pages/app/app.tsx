@@ -3,8 +3,8 @@ import { ApolloProvider } from '@apollo/client';
 import Box from '@material-ui/core/Box';
 import MomentUtils from '@date-io/moment';
 import { Router, Redirect, LocationProvider, useLocation, useNavigate } from '@reach/router';
-import { LogOut } from 'react-feather';
-import { ThemeProvider, Button } from '@material-ui/core';
+import { LogOut, X } from 'react-feather';
+import { ThemeProvider, Button, IconButton } from '@material-ui/core';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import { observer } from 'mobx-react';
 import { SnackbarProvider } from 'notistack';
@@ -14,7 +14,6 @@ import { SideBarContent } from '../../components/side-nav-bar/side-bar-content/s
 import { SideBarItem } from '../../components/side-nav-bar/side-bar-item/side-bar-item';
 import { SideBarFooter } from '../../components/side-nav-bar/side-bar-footer/side-bar-footer';
 import { SideBarHeader } from '../../components/side-nav-bar/side-bar-header/side-bar-header';
-// import { SettingsPage } from '../settings-page/settings-page';
 import { ReactComponent as Logo } from '../../images/ollie_ears_w_text.svg';
 import { theme } from '../../common/theming/theming';
 import { useRootStore } from '../../common/stores';
@@ -95,22 +94,30 @@ const Shell = observer(() => {
   );
 });
 
-export const Providers = ({ children }: React.PropsWithChildren<{}>) => (
-  <LocationProvider>
-    <ThemeProvider theme={{ ...theme }}>
-      <SnackbarProvider
-        maxSnack={3}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-      >
-        <MuiPickersUtilsProvider utils={MomentUtils}>{children}</MuiPickersUtilsProvider>
-      </SnackbarProvider>
-    </ThemeProvider>
-  </LocationProvider>
-);
-
+const Providers = ({ children }: React.PropsWithChildren<{}>) => {
+  const notistackRef = React.createRef<SnackbarProvider>();
+  return (
+    <LocationProvider>
+      <ThemeProvider theme={{ ...theme }}>
+        <SnackbarProvider
+          ref={notistackRef}
+          action={(key) => (
+            <IconButton onClick={() => notistackRef.current?.closeSnackbar(key)}>
+              <X color="#ffffff" />
+            </IconButton>
+          )}
+          maxSnack={3}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'center',
+          }}
+        >
+          <MuiPickersUtilsProvider utils={MomentUtils}>{children}</MuiPickersUtilsProvider>
+        </SnackbarProvider>
+      </ThemeProvider>
+    </LocationProvider>
+  );
+};
 function App() {
   return (
     <Providers>
