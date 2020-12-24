@@ -154,7 +154,7 @@ export const LoginPage = observer(({ navigate }: RouteComponentProps) => {
 
             <Box width="100%" textAlign="center" fontWeight="bold" fontSize={14} mt={4}>
               <Link to="/signup" style={{ color: 'inherit' }}>
-                You don't have a Ollie account? Create one now.
+                You don't have an Ollie account? Create one now.
               </Link>
             </Box>
           </Box>

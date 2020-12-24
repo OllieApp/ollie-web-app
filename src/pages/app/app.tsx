@@ -118,6 +118,7 @@ const Providers = ({ children }: React.PropsWithChildren<{}>) => {
     </LocationProvider>
   );
 };
+
 function App() {
   return (
     <Providers>
