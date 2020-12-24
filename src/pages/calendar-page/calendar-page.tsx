@@ -164,15 +164,16 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
   };
 
   const handleCancel = async () => {
-    // eslint-disable-next-line no-alert, no-restricted-globals
-    if (confirm('Are you sure?')) {
-      const id = anchorEl?.dataset.id;
-      if (!id) return;
+    const info = anchorEl?.dataset.id;
+    if (!info) return;
 
+    const [type, id] = info.split(' - ');
+
+    if (type === 'appointment') {
       await userStore.cancelAppointment(id);
-
-      handleClose();
     }
+
+    handleClose();
   };
 
   const handleDateRangeChange = useCallback(
@@ -256,10 +257,11 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                   return (
                     <div style={{ overflow: 'hidden', height: 'inherit' }}>
                       <div>{args.timeText}</div>
+                      {/* prettier-ignore-start */}
                       <div
                         style={{
                           fontWeight: 'bold',
-                          WebkitLineClamp: 2,
+                          // webkitLineClamp: 2,
                           overflow: 'hidden',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',

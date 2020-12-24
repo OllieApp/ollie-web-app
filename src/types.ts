@@ -1,10 +1,10 @@
 export interface AuthUser {
   firstName: string;
   lastName: string;
-  email: string;
-  password: string;
   category: number;
   gender: number;
+  email?: string;
+  password?: string;
 }
 
 export interface User {

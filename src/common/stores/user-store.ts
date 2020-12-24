@@ -10,6 +10,8 @@ export default class UserStore {
 
   @observable authStatus: 'in' | 'out' | 'loading' = 'out';
 
+  @observable authMethod?: 'email' | 'google' = 'email';
+
   @observable firebaseUser?: firebase.User;
 
   @observable authToken?: string;
@@ -20,118 +22,171 @@ export default class UserStore {
 
   @observable practitionerInfo?: Practitioner;
 
-  @observable isLoadingFirebaseUser = true;
+  @observable isBootstraped = false;
 
-  @observable isLoadingPractitionerInfo = false;
+  @observable isSignInWithEmailAndPasswordLoading = false;
+
+  @observable isSignInWithEmailLoading = false;
+
+  @observable isSignInWithGoogleLoading = false;
+
+  @observable isSignUpWithEmailLoading = false;
+
+  @observable isFetchingUserInfo = false;
+
+  @observable userExists = false;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
 
-    auth().onAuthStateChanged((user) => this.updateFirebaseUser(user));
+    const { currentUser } = auth();
+    if (currentUser) this.fetchUserInfo(currentUser);
+
+    auth().onAuthStateChanged((user) => {
+      if (!this.isBootstraped) this.bootstrap(user);
+    });
+  }
+
+  async bootstrap(user?: firebase.User | null) {
+    if (user && this.authStatus === 'out') {
+      await this.checkUserExistence();
+      if (this.userExists) await this.fetchUserInfo(user);
+    }
+
+    this.isBootstraped = true;
   }
 
   @computed get isAuthenticated(): boolean {
-    return this.authStatus === 'in' && Boolean(this.authToken && this.user && this.practitionerInfo);
+    return this.authStatus === 'in';
   }
 
   @computed get isLoadingAuth(): boolean {
-    return this.isLoadingFirebaseUser || this.isLoadingPractitionerInfo;
+    return this.authStatus === 'loading' || this.isFetchingUserInfo;
   }
 
   @computed get isActive(): boolean {
     return this.practitionerInfo?.isActive || false;
   }
 
-  async updateFirebaseUser(user: firebase.User | null) {
-    if (user) {
-      const token = await user.getIdToken(true);
-      const idTokenResult = await user.getIdTokenResult();
-      const hasuraClaim = idTokenResult.claims['https://hasura.io/jwt/claims'];
+  @computed get isCommingFromGAuth(): boolean {
+    return Boolean(this.firebaseUser && !this.userExists);
+  }
 
-      if (hasuraClaim) {
-        this.firebaseUser = user;
-        this.authStatus = 'in';
-        this.authToken = token;
-      } else {
-        // Check if refresh is required.
-        const metadataRef = database().ref(`metadata/${user.uid}/refreshTime`);
+  @action async signInWithEmailAndPassword({ email, password }: { email: string; password: string }): Promise<void> {
+    try {
+      this.authMethod = 'email';
+      this.isSignInWithEmailAndPasswordLoading = true;
 
-        metadataRef.on('value', async (data) => {
-          if (!data.exists) return;
-          // Force refresh to pick up the latest custom claims changes.
-          const newToken = await user.getIdToken(true);
+      const { user } = await auth().signInWithEmailAndPassword(email, password);
+      if (!user) throw new Error('Error siging with email and password.');
 
-          this.firebaseUser = user;
-          this.authStatus = 'in';
-          this.authToken = newToken;
-          this.isLoadingFirebaseUser = false;
-        });
-      }
-    } else {
-      this.firebaseUser = undefined;
-      this.authStatus = 'out';
-      this.authToken = undefined;
+      this.fetchUserInfo(user);
+    } catch (ex) {
+      this.isSignInWithEmailAndPasswordLoading = false;
+      throw ex;
     }
-
-    this.isLoadingFirebaseUser = false;
   }
 
-  @action async loginWithEmail({ email, password }: { email: string; password: string }): Promise<void> {
-    this.isLoadingFirebaseUser = true;
-    await auth().signInWithEmailAndPassword(email, password);
-    await this.fetchUserInfo();
+  @action async signInWithGoogle() {
+    try {
+      this.authMethod = 'google';
+      this.isSignInWithGoogleLoading = true;
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+
+      const { user } = await auth().signInWithPopup(provider);
+      if (!user) throw new Error('Error creating user with Google.');
+
+      this.firebaseUser = user;
+
+      await this.checkUserExistence();
+      if (this.userExists) await this.fetchUserInfo(user);
+
+      return {
+        userExists: this.userExists,
+      };
+    } catch (ex) {
+      this.authMethod = 'email';
+      this.isSignInWithGoogleLoading = false;
+      throw ex;
+    }
   }
 
-  @action async signUpWithEmail({ email, password, firstName, lastName, gender, category }: AuthUser): Promise<void> {
-    this.isLoadingFirebaseUser = true;
-    this.isLoadingPractitionerInfo = true;
+  @action async signUpWithEmail(
+    { email, firstName, lastName, gender, category }: Partial<AuthUser>,
+    user = this.firebaseUser,
+  ): Promise<void> {
+    try {
+      this.authStatus = 'loading';
+      this.isSignUpWithEmailLoading = true;
 
-    const { user } = await auth().createUserWithEmailAndPassword(email, password);
-    if (!user) throw new Error('Error creating user with email.');
+      await OllieAPI.post('/practitioners', {
+        firstName,
+        lastName,
+        email: email || user?.email,
+        category,
+        gender,
+      });
 
-    await OllieAPI.post('/practitioners', {
-      firstName,
-      lastName,
-      email,
-      category,
-      gender,
-    });
-
-    await this.updateFirebaseUser(user);
-    await this.fetchUserInfo();
+      await this.fetchUserInfo(user);
+    } catch (ex) {
+      this.authStatus = 'out';
+      this.isSignUpWithEmailLoading = false;
+      throw ex;
+    }
   }
 
-  @action async logout(): Promise<void> {
+  @action async signUpWithEmailAndPassword({
+    email,
+    password,
+    firstName,
+    lastName,
+    gender,
+    category,
+  }: AuthUser): Promise<void> {
+    try {
+      this.authStatus = 'loading';
+      this.isSignUpWithEmailLoading = true;
+
+      if (!email || !password) throw new Error('Missing required email or password');
+
+      const { user } = await auth().createUserWithEmailAndPassword(email, password);
+      if (!user) throw new Error('Error creating user with email.');
+
+      await this.signUpWithEmail(
+        {
+          email: user.email || undefined,
+          firstName,
+          lastName,
+          gender,
+          category,
+        },
+        user,
+      );
+    } catch (ex) {
+      this.authStatus = 'out';
+      this.isSignUpWithEmailLoading = false;
+      throw ex;
+    }
+  }
+
+  @action async signOut(): Promise<void> {
     await auth().signOut();
-    this.user = null;
-    this.practitionerInfo = undefined;
+
+    this.user = undefined;
+    this.authToken = undefined;
     this.firebaseUser = undefined;
-  }
-
-  @action async fetchUserInfo(): Promise<void> {
-    if (!this.firebaseUser) return;
-
-    this.isLoadingPractitionerInfo = true;
-
-    const { data: user } = await OllieAPI.get<User>(`/users`);
-
-    const {
-      data: { ids },
-    } = await OllieAPI.get<{ ids: string[] }>(`/practitioners`);
-
-    const { data: practitioner } = await OllieAPI.get(`/practitioners/${ids[0]}`);
-
-    this.user = user as User;
-    this.practitionerIds = ids;
-    this.practitionerInfo = practitioner as Practitioner;
-    this.isLoadingPractitionerInfo = false;
+    this.practitionerIds = undefined;
+    this.practitionerInfo = undefined;
+    this.authStatus = 'out';
   }
 
   @action async updatePractitionerProfile(data: Partial<Practitioner> & Partial<User>): Promise<void> {
     if (!this.practitionerIds) return;
 
     await OllieAPI.patch<Practitioner>(`/practitioners/${this.practitionerIds[0]}`, data);
-    await this.fetchUserInfo();
+    await this.fetchPractitionerInfo();
   }
 
   @action async uploadAvatar(file: File): Promise<void> {
@@ -144,12 +199,75 @@ export default class UserStore {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    await this.fetchUserInfo();
+    await this.fetchPractitionerInfo();
   }
 
   @action async cancelAppointment(id: string): Promise<void> {
     if (!this.practitionerIds) return;
 
-    await OllieAPI.post(`/appointments/${id}/cancel`);
+    await OllieAPI.post(`/appointments/${id}/cancel`, {
+      // FIXME
+      // eslint-disable-next-line no-alert
+      cancellationReason: prompt(
+        `${this.practitionerInfo?.title} in order to cancel this event, you will need to provide a simple reason for this cancellation. This will not be shared with any patients. (min. 40 characters)`,
+      ),
+    });
+  }
+
+  async watchToken() {
+    const user = this.firebaseUser;
+    if (!user) return;
+
+    const metadataRef = database().ref(`metadata/${user.uid}/refreshTime`);
+    metadataRef.on('value', async (data) => {
+      if (!data.exists) return;
+      // Force refresh to pick up the latest custom claims changes.
+      await user.getIdToken(true);
+      this.fetchUserInfo(user);
+    });
+  }
+
+  async checkUserExistence(): Promise<void> {
+    try {
+      await OllieAPI.get<User>(`/users`);
+      this.userExists = true;
+    } catch (ex) {
+      if (ex.response?.status === 404) {
+        this.userExists = false;
+      } else {
+        throw ex;
+      }
+    }
+  }
+
+  async fetchPractitionerInfo() {
+    const {
+      data: { ids },
+    } = await OllieAPI.get<{ ids: string[] }>(`/practitioners`);
+    const { data: practitioner } = await OllieAPI.get(`/practitioners/${ids[0]}`);
+
+    this.practitionerIds = ids;
+    this.practitionerInfo = practitioner as Practitioner;
+  }
+
+  async fetchUserInfo(firebaseUser = this.firebaseUser): Promise<void> {
+    this.isFetchingUserInfo = true;
+    const { data: user } = await OllieAPI.get<User>(`/users`);
+
+    await this.fetchPractitionerInfo();
+
+    this.user = user as User;
+    this.firebaseUser = firebaseUser;
+    this.authToken = await firebaseUser?.getIdToken();
+    this.userExists = true;
+    this.isSignInWithGoogleLoading = false;
+    this.isSignInWithEmailLoading = false;
+    this.isSignInWithEmailAndPasswordLoading = false;
+    this.isSignUpWithEmailLoading = false;
+    this.isFetchingUserInfo = false;
+    this.isBootstraped = true;
+    this.authStatus = 'in';
+
+    this.watchToken();
   }
 }

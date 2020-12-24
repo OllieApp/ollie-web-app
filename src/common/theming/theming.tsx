@@ -118,7 +118,7 @@ export const theme = createMuiTheme({
       sizeLarge: {
         fontSize: 18,
         borderRadius: 25,
-        padding: '18px 25px',
+        padding: '14px 25px',
       },
     },
     MuiInputBase: {

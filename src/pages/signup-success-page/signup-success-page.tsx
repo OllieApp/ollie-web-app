@@ -13,7 +13,7 @@ const useStyles = makeStyles({
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SignUpSuccessPage(props: RouteComponentProps) {
-  const { name } = useParams();
+  const { title } = useParams();
   const styles = useStyles();
 
   return (
@@ -25,7 +25,7 @@ export function SignUpSuccessPage(props: RouteComponentProps) {
           </Box>
           <Box textAlign="center" mb={6}>
             <Typography variant="h2">
-              Welcome to the Ollie family Dr {name}! <Emoji symbol="🎉" />
+              Welcome to the Ollie family {title}! <Emoji symbol="🎉" />
             </Typography>
             <Box mt={2}>
               <Typography variant="h3" style={{ fontWeight: 400 }}>
@@ -42,7 +42,7 @@ export function SignUpSuccessPage(props: RouteComponentProps) {
               </Link>
             </Grid>
             <Grid item xs>
-              <Link to="/login">
+              <Link to="/">
                 <Button variant="contained" color="primary" size="large" fullWidth>
                   let's go
                 </Button>

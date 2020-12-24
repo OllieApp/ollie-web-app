@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { ApolloProvider } from '@apollo/client';
 import Box from '@material-ui/core/Box';
 import MomentUtils from '@date-io/moment';
@@ -7,6 +7,8 @@ import { LogOut } from 'react-feather';
 import { ThemeProvider, Button } from '@material-ui/core';
 import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 import { observer } from 'mobx-react';
+import { SnackbarProvider } from 'notistack';
+import { AuthLoadingPage } from 'pages/auth-loading-page/auth-loading-page';
 import { SideBar } from '../../components/side-nav-bar/side-bar/side-bar';
 import { SideBarContent } from '../../components/side-nav-bar/side-bar-content/side-bar-content';
 import { SideBarItem } from '../../components/side-nav-bar/side-bar-item/side-bar-item';
@@ -26,44 +28,15 @@ const privateRoutes = routeConfigs.filter(([, config]) => !config.public);
 
 const Shell = observer(() => {
   const { userStore } = useRootStore();
-
-  const {
-    isAuthenticated,
-    isLoadingAuth,
-    isLoadingPractitionerInfo,
-    authStatus,
-    authToken,
-    practitionerInfo,
-  } = userStore;
-
+  const { isBootstraped, authStatus, authToken, isCommingFromGAuth } = userStore;
   const navigate = useNavigate();
   const location = useLocation();
   const currentRouteConfig = useMemo(() => getCurrentRouteConfig(location.pathname), [location.pathname]);
   const apolloClient = useApolloClient(authToken);
 
-  const isBootstraped = useMemo<boolean>(() => Boolean(isAuthenticated && userStore.practitionerInfo && apolloClient), [
-    isAuthenticated,
-    userStore.practitionerInfo,
-    apolloClient,
-  ]);
+  const handleLogout = () => userStore.signOut().then(() => navigate('/auth'));
 
-  useEffect(() => {
-    if (authStatus === 'in' && !practitionerInfo && !isLoadingPractitionerInfo) {
-      userStore.fetchUserInfo();
-    }
-  }, [authStatus, practitionerInfo, isLoadingPractitionerInfo, userStore]);
-
-  useEffect(() => {
-    if (currentRouteConfig.public === false && !isAuthenticated && !isLoadingAuth) {
-      navigate('/auth');
-    } else if (location.pathname !== '/signup' && currentRouteConfig.public && isAuthenticated && !isLoadingAuth) {
-      navigate('/calendar');
-    }
-  }, [isAuthenticated, isLoadingAuth, currentRouteConfig, navigate, location]);
-
-  const handleLogout = () => userStore.logout();
-
-  return (
+  return isBootstraped ? (
     <>
       {currentRouteConfig.sidebar && (
         <SideBar>
@@ -89,19 +62,25 @@ const Shell = observer(() => {
 
       <Box bgcolor="gray.bg" marginLeft={currentRouteConfig.sidebar ? '150px' : 0}>
         <Router>
-          {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+          {isCommingFromGAuth && <Redirect from="*" to="/signup" noThrow />}
+          {authStatus === 'out' && <Redirect from="*" to="/auth" noThrow />}
           {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+          {authStatus === 'in' && <Redirect from="/auth" to="/calendar" noThrow />}
+          {authStatus === 'in' && <Redirect from="/signup" to="/calendar" noThrow />}
 
           {publicRoutes.map(([path, { component: Page }]) => (
             <Page key={path} path={path} />
           ))}
         </Router>
 
-        {isBootstraped && apolloClient && (
+        {apolloClient && (
           <ApolloProvider client={apolloClient}>
             <Router>
-              {authStatus === 'out' && <Redirect from="/" to="/auth" noThrow />}
+              {isCommingFromGAuth && <Redirect from="*" to="/signup" noThrow />}
+              {authStatus === 'out' && <Redirect from="*" to="/auth" noThrow />}
               {authStatus === 'in' && <Redirect from="/" to="/calendar" noThrow />}
+              {authStatus === 'in' && <Redirect from="/auth" to="/calendar" noThrow />}
+              {authStatus === 'in' && <Redirect from="/signup" to="/calendar" noThrow />}
 
               {privateRoutes.map(([path, { component: Page }]) => (
                 <Page key={path} path={path} />
@@ -111,18 +90,32 @@ const Shell = observer(() => {
         )}
       </Box>
     </>
+  ) : (
+    <AuthLoadingPage />
   );
 });
 
+const Providers = ({ children }: React.PropsWithChildren<{}>) => (
+  <LocationProvider>
+    <ThemeProvider theme={{ ...theme }}>
+      <SnackbarProvider
+        maxSnack={3}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+      >
+        <MuiPickersUtilsProvider utils={MomentUtils}>{children}</MuiPickersUtilsProvider>
+      </SnackbarProvider>
+    </ThemeProvider>
+  </LocationProvider>
+);
+
 function App() {
   return (
-    <LocationProvider>
-      <ThemeProvider theme={{ ...theme }}>
-        <MuiPickersUtilsProvider utils={MomentUtils}>
-          <Shell />
-        </MuiPickersUtilsProvider>
-      </ThemeProvider>
-    </LocationProvider>
+    <Providers>
+      <Shell />
+    </Providers>
   );
 }
 

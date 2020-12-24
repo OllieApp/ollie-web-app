@@ -4,6 +4,7 @@ import { observer } from 'mobx-react';
 import { Box, Button, CircularProgress, makeStyles } from '@material-ui/core';
 import { RouteComponentProps } from '@reach/router';
 import { FormikProvider, Form, useFormik } from 'formik';
+import { useSnackbar } from 'notistack';
 import { CategoryStep } from './components/category-step';
 import { NameStep } from './components/name-step';
 import { GenderStep } from './components/gender-step';
@@ -12,34 +13,6 @@ import { EmailStep } from './components/email-step';
 import { PasswordStep } from './components/password-step';
 import { useRootStore } from '../../common/stores';
 import { AuthUser } from '../../types';
-
-const steps = [
-  {
-    key: 'category',
-    component: CategoryStep,
-    fields: ['category'],
-  },
-  {
-    key: 'name',
-    component: NameStep,
-    fields: ['firstName', 'lastName'],
-  },
-  {
-    key: 'gender',
-    component: GenderStep,
-    fields: ['gender'],
-  },
-  {
-    key: 'email',
-    component: EmailStep,
-    fields: ['email'],
-  },
-  {
-    key: 'password',
-    component: PasswordStep,
-    fields: ['password'],
-  },
-] as StepConfig[];
 
 const initialValues: AuthUser = {
   firstName: '',
@@ -50,20 +23,13 @@ const initialValues: AuthUser = {
   gender: null!,
 };
 
-const validationSchema = yup.object().shape<AuthUser>({
-  firstName: yup.string().required('first name is a required field'),
-  lastName: yup.string().required('last name is a required field'),
-  email: yup.string().email().required(),
-  password: yup
-    .string()
-    .required()
-    .matches(
-      /^.*(?=.{8,})((?=.*[!@#$%^&*()\-_=+{};:,<.>]){1})(?=.*\d)((?=.*[a-z]){1})((?=.*[A-Z]){1}).*$/,
-      'Password must contain at least 8 characters, one uppercase, one number, and one special case character',
-    ),
-  category: yup.number().required(),
-  gender: yup.number().required(),
-});
+const emailRule = yup.string().email();
+const passwordRule = yup
+  .string()
+  .matches(
+    /^.*(?=.{8,})((?=.*[!@#$%^&*()\-_=+{};:,<.>]){1})(?=.*\d)((?=.*[a-z]){1})((?=.*[A-Z]){1}).*$/,
+    'Password must contain at least 8 characters, one uppercase, one number, and one special case character',
+  );
 
 const useStyles = makeStyles({
   progressBar: {
@@ -72,31 +38,96 @@ const useStyles = makeStyles({
 });
 
 export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
-  const { userStore } = useRootStore();
   const styles = useStyles();
-
+  const { enqueueSnackbar } = useSnackbar();
+  const { userStore } = useRootStore();
+  const { isCommingFromGAuth, firebaseUser } = userStore;
   const [currentStep, setCurrentStep] = useState<number>(0);
+
+  const validationSchema = useMemo(
+    () =>
+      yup.object().shape<AuthUser>({
+        firstName: yup.string().required('first name is a required field'),
+        lastName: yup.string().required('last name is a required field'),
+        email: isCommingFromGAuth ? emailRule : emailRule.required(),
+        password: isCommingFromGAuth ? passwordRule : passwordRule.required(),
+        category: yup.number().required(),
+        gender: yup.number().required(),
+      }),
+    [userStore.authMethod],
+  );
+
+  const currentUserName = useMemo(() => firebaseUser?.displayName, [firebaseUser]);
+  const currentFirstName = useMemo(() => currentUserName?.split(' ')[0], [currentUserName]);
+  const currentLastName = useMemo(() => {
+    if (!currentUserName) return null;
+    const [, ...rest] = currentUserName.split(' ');
+    return rest.join(' ');
+  }, [currentUserName]);
+
   const form = useFormik<AuthUser>({
-    initialValues,
+    initialValues: {
+      ...initialValues,
+      firstName: currentFirstName || '',
+      lastName: currentLastName || '',
+    },
     validationSchema,
     onSubmit: async (userData) => {
       try {
-        await userStore.signUpWithEmail(userData);
-        if (navigate) navigate(`/signup/success/${userData.lastName}`, {});
+        if (isCommingFromGAuth) {
+          await userStore.signUpWithEmail(userData);
+        } else {
+          await userStore.signUpWithEmailAndPassword(userData);
+        }
+
+        if (navigate) navigate(`/signup/success/${userStore.practitionerInfo?.title}`, {});
       } catch (ex) {
-        await userStore.logout();
-        if (navigate) navigate('/signup', {});
-        // eslint-disable-next-line no-alert
-        alert(ex.message);
+        if (ex.message) enqueueSnackbar(ex.message);
         // TODO: Report
       }
     },
   });
 
-  const currentStepConfig = useMemo(() => steps[currentStep], [currentStep]);
-  const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [currentStep]);
+  const steps = useMemo(
+    () =>
+      [
+        {
+          key: 'category',
+          component: CategoryStep,
+          fields: ['category'],
+        },
+        {
+          key: 'name',
+          component: NameStep,
+          fields: ['firstName', 'lastName'],
+        },
+        {
+          key: 'gender',
+          component: GenderStep,
+          fields: ['gender'],
+        },
+        ...(isCommingFromGAuth
+          ? []
+          : [
+              {
+                key: 'email',
+                component: EmailStep,
+                fields: ['email'],
+              },
+              {
+                key: 'password',
+                component: PasswordStep,
+                fields: ['password'],
+              },
+            ]),
+      ] as StepConfig[],
+    [userStore.authMethod],
+  );
+
+  const currentStepConfig = useMemo(() => steps[currentStep], [currentStep, steps]);
+  const completedPercent = useMemo(() => (100 / steps.length) * (currentStep + 1), [currentStep, steps.length]);
   const hasPrevStep = useMemo(() => currentStep > 0, [currentStep]);
-  const isLastStep = useMemo(() => currentStep === 4, [currentStep]);
+  const isLastStep = useMemo(() => currentStep === steps.length - 1, [currentStep, steps.length]);
   const StepView = useMemo(() => currentStepConfig.component, [currentStepConfig]);
 
   const isCurrentStepValid = useMemo(
@@ -158,10 +189,10 @@ export const SignUpPage = observer(({ navigate }: RouteComponentProps) => {
                   color="primary"
                   type="button"
                   onClick={handleNextClick}
-                  disabled={form.isSubmitting}
+                  disabled={userStore.isSignUpWithEmailLoading}
                   fullWidth
                 >
-                  {form.isSubmitting && (
+                  {userStore.isSignUpWithEmailLoading && (
                     <Box mr={1} display="inline-flex">
                       <CircularProgress size="1em" />
                     </Box>

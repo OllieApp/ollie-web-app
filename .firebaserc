@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "ollie-5ea31"
+  },
+  "targets": {
+    "ollie-5ea31": {
+      "hosting": {
+        "staging": [
+          "ollie-staging-1580b"
+        ],
+        "production": [
+          "ollie-5ea31"
+        ]
+      }
+    }
   }
 }

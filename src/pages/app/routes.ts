@@ -1,7 +1,6 @@
 import { RouteComponentProps } from '@reach/router';
 import { CalendarPage } from '../calendar-page/calendar-page';
 import { ProfilePage } from '../profile-page/profile-page';
-import { AuthPage } from '../auth-page/auth-page';
 import { LoginPage } from '../login-page/login-page';
 import { SignUpPage } from '../signup-page/signup-page';
 import { SignUpSuccessPage } from '../signup-success-page/signup-success-page';
@@ -26,11 +25,6 @@ export const routes: Record<string, AppRoute> = {
     sidebar: true,
   },
   '/auth': {
-    component: AuthPage,
-    public: true,
-    sidebar: false,
-  },
-  '/login': {
     component: LoginPage,
     public: true,
     sidebar: false,
@@ -40,7 +34,7 @@ export const routes: Record<string, AppRoute> = {
     public: true,
     sidebar: false,
   },
-  '/signup/success/:name': {
+  '/signup/success/:title': {
     component: SignUpSuccessPage,
     public: false,
     sidebar: false,

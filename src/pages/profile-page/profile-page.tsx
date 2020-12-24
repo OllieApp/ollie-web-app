@@ -27,6 +27,7 @@ import {
   Checkbox,
   debounce,
 } from '@material-ui/core';
+import { useSnackbar } from 'notistack';
 import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calendar, Edit } from 'react-feather';
 import { KeyboardTimePicker } from '@material-ui/pickers';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
@@ -89,6 +90,7 @@ const validationSchema = yup.object().shape({
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const ProfilePage = observer((props: RouteComponentProps) => {
+  const { enqueueSnackbar } = useSnackbar();
   const { userStore } = useRootStore();
   const { practitionerInfo } = userStore;
 
@@ -114,8 +116,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
         form.setSubmitting(false);
       } catch (ex) {
         form.setSubmitting(false);
-        // eslint-disable-next-line no-alert
-        alert(ex.message);
+        if (ex.message) enqueueSnackbar(ex.message);
         // TODO: Report
       }
     },
