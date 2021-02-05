@@ -120,6 +120,9 @@ export const theme = createMuiTheme({
         borderRadius: 25,
         padding: '14px 25px',
       },
+      contained: {
+        letterSpacing: '0.7px',
+      },
     },
     MuiInputBase: {
       root: {

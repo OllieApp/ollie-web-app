@@ -40,22 +40,6 @@ interface RecurrenceEnd {
   occurrenceCount?: number;
   weeklyRecurrence: Array<'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'>;
 }
-interface CalendarEvent {
-  id: string;
-  title: string;
-  start: string;
-  end?: string;
-  groupId?: string;
-  color?: string;
-  allDay?: boolean;
-  editable?: boolean;
-  rrule?: string;
-  backgroundColor?: string;
-  borderColor?: string;
-  extendedProps?: {
-    eventType?: 'consultation' | 'video';
-  };
-}
 
 export const CreateEventModal = (props: {
   open: boolean;
@@ -71,13 +55,112 @@ export const CreateEventModal = (props: {
   const [notes, setNotes] = useState('');
   const [isAllDayEvent, setAllDayEvent] = useState<boolean>(isAllDay ?? false);
   const [isRecurringEvent, setIsRecurringEvent] = useState<boolean>(false);
-  const [eventColor, setEventColor] = useState<string | null>('');
+  const [eventColor, setEventColor] = useState<string | null>();
   const [startDate, setStartDate] = useState<Date>(startTime ?? new Date());
   const [endDate, setEndDate] = useState<Date>(endTime ?? startDate);
   const [recurrentCount, setRecurrentCount] = useState<number | null>(0);
   const [recurrenceFreq, setRecurrenceFreq] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [recurrenceEnd, setRecurrenceEnd] = useState<RecurrenceEnd>({ type: 'never', weeklyRecurrence: [] });
   const [isCreateEventOpen, setCreateEventOpen] = useState(open);
+
+  const isCreateEventDisabled = (): boolean => {
+    const mStartDate = moment(startDate);
+    const mEndDate = moment(endDate);
+    if (isAllDay) {
+      return mEndDate < mStartDate;
+    }
+    return !endDate || endDate <= startDate;
+  };
+
+  useEffect(() => {
+    if (recurrentCount === null) {
+      return;
+    }
+    if (recurrentCount < 0) {
+      setRecurrentCount(0);
+    }
+    if (!Number.isInteger(recurrentCount)) {
+      setRecurrentCount(Math.trunc(recurrentCount));
+    }
+  }, [recurrentCount]);
+
+  useEffect(() => {
+    if (open) {
+      if (!isCreateEventOpen) {
+        setCreateEventOpen(true);
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (endTime && startTime) {
+      setStartDate(startTime);
+      setEndDate(endTime);
+    }
+  }, [endTime, startTime]);
+
+  useEffect(() => {
+    setAllDayEvent(isAllDay);
+  }, [isAllDay]);
+
+  useEffect(() => {
+    if (!recurrenceEnd.occurrenceCount) {
+      return;
+    }
+    if (recurrenceEnd.occurrenceCount < 0) {
+      setRecurrenceEnd({ ...recurrenceEnd, occurrenceCount: 0 });
+    }
+    if (!Number.isInteger(recurrenceEnd.occurrenceCount)) {
+      setRecurrenceEnd({ ...recurrenceEnd, occurrenceCount: Math.trunc(recurrenceEnd.occurrenceCount) });
+    }
+  }, [recurrenceEnd.occurrenceCount]);
+
+  useEffect(() => {
+    if (startDate < new Date()) {
+      setStartDate(new Date());
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (isAllDayEvent) {
+      setStartDate(moment(startDate).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).toDate());
+      setEndDate(
+        moment(endDate ?? startDate)
+          .set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
+          .toDate(),
+      );
+    }
+  }, [isAllDayEvent]);
+
+  function addDayToWeeklyRecurrence(weekDay: 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU') {
+    if (recurrenceEnd.weeklyRecurrence.findIndex((e) => e === weekDay) === -1) {
+      setRecurrenceEnd({
+        ...recurrenceEnd,
+        weeklyRecurrence: [...recurrenceEnd.weeklyRecurrence, weekDay],
+      });
+      return;
+    }
+    setRecurrenceEnd({
+      ...recurrenceEnd,
+      weeklyRecurrence: [...recurrenceEnd.weeklyRecurrence?.filter((e) => e !== weekDay)],
+    });
+  }
+
+  // function mapRecurrenceFreqToFrequency(freq: 'daily' | 'weekly' | 'monthly' | 'yearly'): Frequency {
+  //     switch (freq) {
+  //         case 'daily':
+  //             return Frequency.DAILY;
+  //         case 'monthly':
+  //             return Frequency.MONTHLY;
+  //         case 'weekly':
+  //             return Frequency.WEEKLY;
+  //         case 'yearly':
+  //             return Frequency.YEARLY;
+  //         default:
+  //             return Frequency.DAILY;
+  //     }
+  // }
+
   const recurrenceView = isRecurringEvent && (
     <Grid xs={6} item>
       <Box height="20px" />
@@ -268,223 +351,6 @@ export const CreateEventModal = (props: {
     </Grid>
   );
 
-  useEffect(() => {
-    if (recurrentCount === null) {
-      return;
-    }
-    if (recurrentCount < 0) {
-      setRecurrentCount(0);
-    }
-    if (!Number.isInteger(recurrentCount)) {
-      setRecurrentCount(Math.trunc(recurrentCount));
-    }
-  }, [recurrentCount]);
-
-  useEffect(() => {
-    if (open) {
-      if (!isCreateEventOpen) {
-        setCreateEventOpen(true);
-      }
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (endTime && startTime) {
-      setStartDate(startTime);
-      setEndDate(endTime);
-    }
-  }, [endTime, startTime]);
-
-  useEffect(() => {
-    setAllDayEvent(isAllDay);
-  }, [isAllDay]);
-
-  useEffect(() => {
-    if (!recurrenceEnd.occurrenceCount) {
-      return;
-    }
-    if (recurrenceEnd.occurrenceCount < 0) {
-      setRecurrenceEnd({ ...recurrenceEnd, occurrenceCount: 0 });
-    }
-    if (!Number.isInteger(recurrenceEnd.occurrenceCount)) {
-      setRecurrenceEnd({ ...recurrenceEnd, occurrenceCount: Math.trunc(recurrenceEnd.occurrenceCount) });
-    }
-  }, [recurrenceEnd.occurrenceCount]);
-
-  useEffect(() => {
-    if (endDate !== null && endDate <= startDate) {
-      setEndDate(moment(startDate).add(5, 'minutes').toDate());
-    }
-    if (
-      isAllDayEvent &&
-      endDate.getFullYear() === startDate.getFullYear() &&
-      endDate.getMonth() === startDate.getMonth() &&
-      endDate.getDay() === startDate.getDay()
-    ) {
-      setEndDate(
-        moment(endDate ?? startDate)
-          .set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
-          .add(1, 'day')
-          .toDate(),
-      );
-    }
-  }, [endDate, startDate]);
-
-  useEffect(() => {
-    if (startDate < new Date()) {
-      setStartDate(new Date());
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (isAllDayEvent) {
-      setStartDate(moment(startDate).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).toDate());
-      setEndDate(
-        moment(endDate ?? startDate)
-          .set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
-          .toDate(),
-      );
-    }
-  }, [isAllDayEvent]);
-
-  function addDayToWeeklyRecurrence(weekDay: 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU') {
-    if (recurrenceEnd.weeklyRecurrence.findIndex((e) => e === weekDay) === -1) {
-      setRecurrenceEnd({
-        ...recurrenceEnd,
-        weeklyRecurrence: [...recurrenceEnd.weeklyRecurrence, weekDay],
-      });
-      return;
-    }
-    setRecurrenceEnd({
-      ...recurrenceEnd,
-      weeklyRecurrence: [...recurrenceEnd.weeklyRecurrence?.filter((e) => e !== weekDay)],
-    });
-  }
-
-  // const slotMaxTime = businessHours
-  //     ?.map((x) => x.endTime)
-  //     .reduce((a, b) => {
-  //         let aDateString = a;
-  //         let bDateString = b;
-  //         const padTime = (value: number) => value.toString().padStart(2, '0');
-  //         try {
-  //             // check here for date
-  //             if (aDateString.length > 6) {
-  //                 const date = new Date(aDateString);
-  //                 aDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-  //             }
-  //             if (bDateString.length > 6) {
-  //                 const date = new Date(bDateString);
-  //                 bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-  //             }
-  //         } catch (error) {
-  //             // TODO: Report
-  //         }
-
-  //         const compareRes = aDateString.localeCompare(bDateString, 'en');
-  //         switch (compareRes) {
-  //             case 1:
-  //                 return aDateString;
-  //             case -1:
-  //                 return bDateString;
-  //             default:
-  //                 return aDateString;
-  //         }
-  //     });
-  // const slotMinTime = businessHours
-  //     ?.map((x) => x.startTime)
-  //     .reduce((a, b) => {
-  //         let aDateString = a;
-  //         let bDateString = b;
-  //         const padTime = (value: number) => value.toString().padStart(2, '0');
-  //         try {
-  //             // check here for date
-  //             if (a.length > 6) {
-  //                 const date = new Date(a);
-  //                 aDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-  //             }
-  //             if (b.length > 6) {
-  //                 const date = new Date(b);
-  //                 bDateString = `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-  //             }
-  //         } catch (error) {
-  //             // TODO: Report
-  //         }
-  //         const compareRes = aDateString.localeCompare(bDateString, 'en');
-  //         switch (compareRes) {
-  //             case 1:
-  //                 return bDateString;
-  //             case -1:
-  //                 return aDateString;
-  //             default:
-  //                 return bDateString;
-  //         }
-  //     });
-
-  // function mapRecurrenceFreqToFrequency(freq: 'daily' | 'weekly' | 'monthly' | 'yearly'): Frequency {
-  //     switch (freq) {
-  //         case 'daily':
-  //             return Frequency.DAILY;
-  //         case 'monthly':
-  //             return Frequency.MONTHLY;
-  //         case 'weekly':
-  //             return Frequency.WEEKLY;
-  //         case 'yearly':
-  //             return Frequency.YEARLY;
-  //         default:
-  //             return Frequency.DAILY;
-  //     }
-  // }
-
-  const addEventToCalendar = () => {
-    // try {
-    //     setEvents([
-    //         ...events,
-    //         {
-    //             id: '231233',
-    //             title,
-    //             start: startDate.toISOString(),
-    //             end: endDate?.toISOString(),
-    //             allDay: isAllDay,
-    //             color: '#EDED85',
-    //             rrule: isRecurringEvent
-    //                 ? new RRule({
-    //                       freq: mapRecurrenceFreqToFrequency(recurrenceFreq),
-    //                       interval: recurrentCount ?? undefined,
-    //                       dtstart: startDate,
-    //                       count: recurrenceEnd.occurrenceCount,
-    //                       until: recurrenceEnd.endDate ?? new Date(2999, 12, 31),
-    //                       byweekday: [
-    //                           ...recurrenceEnd.weeklyRecurrence.map((i) => {
-    //                               switch (i) {
-    //                                   case 'MO':
-    //                                       return 0;
-    //                                   case 'TU':
-    //                                       return 1;
-    //                                   case 'WE':
-    //                                       return 2;
-    //                                   case 'TH':
-    //                                       return 3;
-    //                                   case 'FR':
-    //                                       return 4;
-    //                                   case 'SA':
-    //                                       return 5;
-    //                                   case 'SU':
-    //                                       return 6;
-    //                               }
-    //                           }),
-    //                       ],
-    //                   }).toString()
-    //                 : undefined,
-    //             backgroundColor: eventColor ?? undefined,
-    //             borderColor: eventColor ?? undefined,
-    //         },
-    //     ]);
-    // } catch (error) {
-    //     // TODO: Report
-    // }
-  };
-
   return (
     <Dialog
       fullWidth
@@ -569,7 +435,7 @@ export const CreateEventModal = (props: {
                     format="DD/MM/yyyy"
                     margin="dense"
                     id="start-date-picker"
-                    label="Start date"
+                    label={isAllDayEvent ? 'From' : 'Start date'}
                     value={startDate}
                     onChange={(date) => setStartDate(date?.toDate() ?? new Date())}
                     KeyboardButtonProps={{
@@ -616,7 +482,7 @@ export const CreateEventModal = (props: {
                     format="DD/MM/yyyy"
                     margin="dense"
                     id="end-date-picker"
-                    label="End date"
+                    label={isAllDayEvent ? 'To' : 'End date'}
                     value={endDate}
                     onChange={(date) => setEndDate(date?.toDate() ?? new Date())}
                     KeyboardButtonProps={{
@@ -685,11 +551,13 @@ export const CreateEventModal = (props: {
           <Button
             size="large"
             disableElevation
+            disabled={isCreateEventDisabled()}
             onClick={() => {
               setCreateEventOpen(false);
+              const endEventDate = moment(endDate).add(1, 'day').toDate();
               onCreateEvent({
                 startTime: startDate,
-                endTime: endDate,
+                endTime: isAllDayEvent ? endEventDate : endDate,
                 hexColor: eventColor ?? undefined,
                 isAllDay: isAllDayEvent,
                 isConfirmed: true,
@@ -698,6 +566,7 @@ export const CreateEventModal = (props: {
               });
             }}
             color="primary"
+            variant="contained"
           >
             Create
           </Button>

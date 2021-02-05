@@ -1,5 +1,6 @@
 import { observable, action, computed } from 'mobx';
 import firebase from 'firebase';
+import { AxiosResponse } from 'axios';
 import { auth, database } from '../firebase/firebase-wrapper';
 import { RootStore } from './root-store';
 import { User, AuthUser, Practitioner } from '../../types';
@@ -202,15 +203,14 @@ export default class UserStore {
     await this.fetchPractitionerInfo();
   }
 
-  @action async cancelAppointment(id: string): Promise<void> {
+  @action async cancelAppointment(
+    appointmentId: string,
+    cancellationReason: string,
+  ): Promise<AxiosResponse | undefined> {
     if (!this.practitionerIds) return;
 
-    await OllieAPI.post(`/appointments/${id}/cancel`, {
-      // FIXME
-      // eslint-disable-next-line no-alert
-      cancellationReason: prompt(
-        `${this.practitionerInfo?.title} in order to cancel this event, you will need to provide a simple reason for this cancellation. This will not be shared with any patients. (min. 40 characters)`,
-      ),
+    return OllieAPI.post(`/appointments/${appointmentId}/cancel`, {
+      cancellationReason,
     });
   }
 
@@ -269,5 +269,12 @@ export default class UserStore {
     this.authStatus = 'in';
 
     this.watchToken();
+  }
+
+  @action async refreshAuthToken() {
+    if (!this.isAuthenticated) {
+      return;
+    }
+    this.authToken = await this.firebaseUser?.getIdToken(true);
   }
 }
