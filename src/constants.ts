@@ -7,10 +7,12 @@ export const DoctorCategories: Record<DoctorCategory, string> = {
   [DoctorCategory.Gynecologist]: 'Gynecologist',
   [DoctorCategory.Physiotherapist]: 'Physiotherapist',
   [DoctorCategory.WellnessCenter]: 'Wellness Center',
+  [DoctorCategory.Biokineticist]: 'Biokineticist',
+  [DoctorCategory.Dentist]: 'Dentist',
 };
 
 export const MedicalAids: Record<MedicalAid, string> = {
-  [MedicalAid.DiscoveryHealth]: 'DiscoveryHealth',
+  [MedicalAid.DiscoveryHealth]: 'Discovery Health',
   [MedicalAid.Momentum]: 'Momentum',
   [MedicalAid.FedHealth]: 'FedHealth',
   [MedicalAid.Bonitas]: 'Bonitas',

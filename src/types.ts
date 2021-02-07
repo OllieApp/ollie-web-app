@@ -61,6 +61,8 @@ export enum DoctorCategory {
   Gynecologist,
   Physiotherapist,
   WellnessCenter,
+  Biokineticist,
+  Dentist,
 }
 
 export enum DoctorAvailability {
