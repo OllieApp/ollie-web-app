@@ -214,6 +214,12 @@ export default class UserStore {
     });
   }
 
+  @action async deletePractitionerEvent(practitionerEventId: string): Promise<AxiosResponse | undefined> {
+    if (!this.practitionerIds) return;
+
+    return OllieAPI.delete(`/practitioner-events/${practitionerEventId}`);
+  }
+
   async watchToken() {
     const user = this.firebaseUser;
     if (!user) return;

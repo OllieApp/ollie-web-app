@@ -23,6 +23,7 @@ import AppointmentOverviewPopover from './components/appointment-overview-popove
 import { PractitionerEventOverviewPopover } from './components/practitioner-event-overview-popover/practitioner-event-overview-popover';
 import { useWindowSize } from '../../common/hooks/use-windows-size';
 import { Point } from './components/shared/point';
+import { DeleteEventModal } from './delete-event-modal/delete-event-modal';
 
 const GET_APPOINTMENTS_SUBSCRIPTION = gql`
   subscription appointmentsSub($practitionerId: bigint, $startTime: timestamptz!, $endTime: timestamptz!) {
@@ -171,7 +172,14 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
   );
 
   const [isCreateEventOpen, setCreateEventOpen] = useState(false);
+  const [isDeleteEventOpen, setDeleteEventOpen] = useState(false);
   const [isCancelAppointmentOpen, setCancelAppointmentDialog] = useState(false);
+
+  const resetModalsOnWindowSizeChange = () => {
+    setCreateEventOpen(false);
+    setDeleteEventOpen(false);
+    setCancelAppointmentDialog(false);
+  };
 
   const selectedAppointment: Appointment | undefined | null =
     selectedEvent?.event.extendedProps?.type === 'appointment' && selectedEvent?.event.extendedProps?.appointment;
@@ -196,6 +204,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
 
   useEffect(() => {
     selectEvent(null);
+    resetModalsOnWindowSizeChange();
   }, [windowSize]);
 
   return (
@@ -372,32 +381,25 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                 });
                 return;
               }
-              enqueueSnackbar('Your appointment was cancelled.', {
-                persist: true,
-                variant: 'success',
-              });
-            } catch (error) {
-              if (error.response.status !== 200 && error.response.status !== 204) {
-                if (error.response.status === 500) {
-                  enqueueSnackbar('Something went wrong while trying to cancel your appointment.', {
-                    persist: true,
-                    variant: 'error',
-                  });
-                } else {
-                  enqueueSnackbar(error.response.data.message[0], {
-                    persist: true,
-                    variant: 'error',
-                  });
-                }
-                return;
-              }
               enqueueSnackbar(
                 `Your appointment with ${selectedAppointment.user.first_name} ${selectedAppointment.user.last_name} was successfully cancelled.`,
                 {
                   persist: true,
-                  variant: 'error',
+                  variant: 'success',
                 },
               );
+            } catch (error) {
+              let errorMessage = 'Something went wrong while trying to cancel your appointment.';
+              if (error.response.status !== 200 && error.response.status !== 204) {
+                if (error.response.status !== 500 && error.response.data.message[0]) {
+                  const [firstError] = error.response.data.message;
+                  errorMessage = firstError;
+                }
+              }
+              enqueueSnackbar(errorMessage, {
+                persist: true,
+                variant: 'error',
+              });
             }
           }}
           open={isCancelAppointmentOpen}
@@ -423,6 +425,54 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
           position={selectedEvent.popoverPosition}
           onClose={onCloseEvent}
           event={selectedPractitionerEvent}
+          onDeleteClick={() => {
+            if (!selectedEvent || selectedEvent.event?.extendedProps?.type !== 'practitionerEvent') return;
+            setDeleteEventOpen(true);
+          }}
+        />
+      )}
+      {selectedPractitionerEvent && (
+        <DeleteEventModal
+          open={isDeleteEventOpen}
+          onClose={() => setDeleteEventOpen(false)}
+          eventTitle={selectedPractitionerEvent.title}
+          startDate={selectedPractitionerEvent.start_time}
+          endDate={selectedPractitionerEvent.end_time}
+          onSubmit={async () => {
+            setDeleteEventOpen(false);
+            if (
+              !selectedEvent ||
+              selectedEvent.event?.extendedProps?.type !== 'practitionerEvent' ||
+              !selectedPractitionerEvent.id
+            ) {
+              return;
+            }
+            try {
+              const res = await userStore.deletePractitionerEvent(selectedPractitionerEvent.id);
+              if (res?.status !== 200) {
+                enqueueSnackbar('The event could not be deleted.', {
+                  persist: true,
+                  variant: 'error',
+                });
+                return;
+              }
+              enqueueSnackbar('Your event was deleted.', {
+                persist: true,
+                variant: 'success',
+              });
+            } catch (error) {
+              let errorMessage = 'Something went wrong while trying to delete your event.';
+              if (error.response.status !== 200 && error.response.status !== 204) {
+                if (error.response.status !== 500 && error.response.data?.message[0]) {
+                  errorMessage = error.response.data?.message[0];
+                }
+              }
+              enqueueSnackbar(errorMessage, {
+                persist: true,
+                variant: 'error',
+              });
+            }
+          }}
         />
       )}
     </>
