@@ -89,6 +89,11 @@ export const theme = createMuiTheme({
       letterSpacing: 0,
       lineHeight: 1.5,
     },
+    h6: {
+      fontSize: 16,
+      letterSpacing: 0.15,
+      fontWeight: 600,
+    },
     overline: {
       fontSize: 20,
       letterSpacing: 0,
@@ -182,6 +187,11 @@ export const theme = createMuiTheme({
     MuiPaper: {
       rounded: {
         borderRadius: 15,
+      },
+    },
+    MuiTooltip: {
+      tooltip: {
+        fontSize: 14,
       },
     },
   },

@@ -26,54 +26,39 @@ import {
   FormControlLabel,
   Checkbox,
   debounce,
+  Tooltip,
+  CircularProgress,
 } from '@material-ui/core';
 import { useSnackbar } from 'notistack';
-import { ChevronDown, MapPin, X, Share, Heart, Star, BookOpen, DollarSign, Calendar, Edit } from 'react-feather';
-import { KeyboardTimePicker } from '@material-ui/pickers';
+import { ChevronDown, MapPin, Edit, HelpCircle } from 'react-feather';
+import { KeyboardTimePicker, KeyboardTimePickerProps } from '@material-ui/pickers';
 import { GoogleMap, useLoadScript } from '@react-google-maps/api';
 import { useTheme } from '@material-ui/core/styles';
-import moment from 'moment';
 import { observer } from 'mobx-react';
 import { mapStyles } from '../../common/theming/map-styles';
 import { AvatarUpload } from './components/avatar-upload';
-import bonitas from '../../images/bonitas.jpg';
-import discovery from '../../images/discovery.png';
-import medshield from '../../images/medshield.png';
-import momentum from '../../images/momentum.png';
 import './profile-page.scss';
-import { DoctorCategory, DoctorAvailability, MedicalAid, WeekDay, PractitionerSchedule } from '../../types';
+import { MedicalAid, WeekDay, PractitionerSchedule } from '../../types';
 import { DoctorCategories, MedicalAids } from '../../constants';
 import { useRootStore } from '../../common/stores';
+import HelpIcon from '@material-ui/icons/Help';
+import DeleteIcon from '@material-ui/icons/Delete';
+import { UpdatePractitionerRequest } from 'common/requests/update-practitioner.request';
+import { Alert } from '@material-ui/lab';
+import { DateTime } from 'luxon';
 
-interface OfficeHours {
-  weekdayStart: Date;
-  weekdayEnd: Date;
-  saturdayStart?: Date;
-  saturdayEnd?: Date;
-  sundayStart?: Date;
-  sundayEnd?: Date;
+interface FlattenedSchedule {
+  dayOfWeek: WeekDay;
+  startTime: DateTime;
+  endTime: DateTime;
 }
 
 const defaultLocation = { lat: -28.4792625, lng: 24.6727135 };
-
-const availableOfficeHours: OfficeHours = {
-  weekdayStart: moment(new Date()).set({ hour: 8, minute: 0 }).toDate(),
-  weekdayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
-  saturdayStart: moment(new Date()).set({ hour: 8, minute: 0 }).toDate(),
-  saturdayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
-  sundayStart: moment(new Date()).set({ hour: 8, minute: 0 }).toDate(),
-  sundayEnd: moment(new Date()).set({ hour: 17, minute: 0 }).toDate(),
-};
-
-const defaultOfficeHours: OfficeHours = {
-  weekdayStart: availableOfficeHours.weekdayStart,
-  weekdayEnd: availableOfficeHours.weekdayEnd,
-};
+const timezone = 'Africa/Johannesburg';
 
 const validationSchema = yup.object().shape({
   email: yup.string().email().required(),
   title: yup.string().required('title is a required field'),
-  category: yup.number().required(),
   appointmentTimeSlot: yup.number(),
   address: yup.string().nullable(),
   bio: yup.string().nullable(),
@@ -84,9 +69,37 @@ const validationSchema = yup.object().shape({
       longitude: yup.number(),
     })
     .nullable(),
-  schedules: yup.array(yup.object<PractitionerSchedule>()),
+  schedules: yup.array(yup.object<FlattenedSchedule>()),
   phone: yup.string().nullable(),
+  line1: yup.string().optional(),
 });
+
+function mapSchedules(schedules: PractitionerSchedule[]): FlattenedSchedule[] {
+  const fSchedules = new Array<FlattenedSchedule>();
+  schedules.forEach((schedule) => {
+    schedule.daysOfWeek.forEach((d) => {
+      fSchedules.push({
+        dayOfWeek: d,
+        startTime: mapTimeStringToDate(schedule.startTime),
+        endTime: mapTimeStringToDate(schedule.endTime),
+      });
+    });
+  });
+  return fSchedules;
+}
+
+function mapTimeStringToDate(time: String): DateTime {
+  const splitTime = time.split(':');
+  const hour = parseInt(splitTime[0]);
+  const minute = parseInt(splitTime[1]);
+
+  return DateTime.utc()
+    .set({
+      hour: hour,
+      minute: minute,
+    })
+    .setZone(timezone);
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const ProfilePage = observer((props: RouteComponentProps) => {
@@ -96,31 +109,118 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
 
   const form = useFormik({
     initialValues: {
-      email: practitionerInfo?.email,
-      title: practitionerInfo?.title,
-      location: practitionerInfo?.location,
-      category: practitionerInfo?.category || DoctorCategory.Unknown,
-      appointmentTimeSlot: practitionerInfo?.appointmentTimeSlot || 15,
+      email: practitionerInfo?.email ?? '',
+      title: practitionerInfo?.title ?? '',
+      location: practitionerInfo?.address?.location,
+      appointmentTimeSlot: practitionerInfo?.appointmentTimeSlot || 30,
       medicalAids: practitionerInfo?.medicalAids || [],
-      address: practitionerInfo?.address || '',
       bio: practitionerInfo?.bio || '',
       avatarUrl: practitionerInfo?.avatarUrl || '',
-      phone: practitionerInfo?.phone || '',
-      schedules: [],
+      phone: practitionerInfo?.phone,
+      schedules: mapSchedules(practitionerInfo?.schedules ?? []).sort((a, b) => a.dayOfWeek - b.dayOfWeek),
+      line1: practitionerInfo?.address?.line1 ?? '',
+      line2: practitionerInfo?.address?.line2 ?? '',
+      suburb: practitionerInfo?.address?.suburb ?? '',
+      stateProvinceCounty: practitionerInfo?.address?.stateProvinceCounty ?? '',
+      city: practitionerInfo?.address?.city ?? '',
+      postalCode: practitionerInfo?.address?.postalCode ?? '',
+      //TODO: Update later when we support multiple countries
+      country: 'South Africa',
     },
     validationSchema,
     onSubmit: async (data) => {
-      try {
-        form.setSubmitting(true);
-        await userStore.updatePractitionerProfile(data);
-        form.setSubmitting(false);
-      } catch (ex) {
-        form.setSubmitting(false);
-        if (ex.message) enqueueSnackbar(ex.message);
-        // TODO: Report
-      }
+      submitUpdatedData();
     },
   });
+
+  const submitUpdatedData = async () => {
+    try {
+      const {
+        title,
+        email,
+        phone,
+        bio,
+        location,
+        line1,
+        line2,
+        suburb,
+        city,
+        postalCode,
+        stateProvinceCounty,
+        schedules,
+      } = form.values;
+      const request: UpdatePractitionerRequest = {};
+      request.address = {};
+
+      if (title.trim() !== practitionerInfo?.title) {
+        request.title = title.trim();
+      }
+
+      if (email.trim() !== practitionerInfo?.email) {
+        request.email = email.trim();
+      }
+
+      if (phone?.trim() !== practitionerInfo?.phone) {
+        request.phone = phone?.trim();
+      }
+
+      if (bio.trim() !== practitionerInfo?.bio) {
+        request.bio = bio.trim();
+      }
+
+      if (
+        location?.latitude !== practitionerInfo?.address?.location?.latitude ||
+        location?.longitude !== practitionerInfo?.address?.location?.longitude
+      ) {
+        request.address.location = {
+          latitude: location?.latitude ?? 0,
+          longitude: location?.longitude ?? 0,
+        };
+      }
+
+      if (line1.trim() !== practitionerInfo?.address?.line1) {
+        request.address.line1 = line1.trim();
+      }
+
+      if (line2.trim() !== practitionerInfo?.address?.line2) {
+        request.address.line2 = line2.trim();
+      }
+
+      if (suburb.trim() !== practitionerInfo?.address?.suburb) {
+        request.address.suburb = suburb.trim();
+      }
+
+      if (city.trim() !== practitionerInfo?.address?.city) {
+        request.address.city = city.trim();
+      }
+
+      if (postalCode.trim() !== practitionerInfo?.address?.postalCode) {
+        request.address.postalCode = postalCode.trim();
+      }
+
+      if (stateProvinceCounty.trim() !== practitionerInfo?.address?.stateProvinceCounty) {
+        request.address.stateProvinceCounty = stateProvinceCounty.trim();
+      }
+
+      if (!schedules.some((s) => !validateSchedule(s, form.values.appointmentTimeSlot).isValid)) {
+        request.schedules = [
+          ...schedules.map((s) => ({
+            daysOfWeek: [s.dayOfWeek],
+            startTime: s.startTime.toUTC().toISO(),
+            endTime: s.endTime.toUTC().toISO(),
+          })),
+        ];
+      }
+
+      form.setSubmitting(true);
+      await userStore.updatePractitionerProfile(request);
+      enqueueSnackbar('Changes successfully saved', { variant: 'success' });
+      form.setSubmitting(false);
+    } catch (ex) {
+      form.setSubmitting(false);
+      if (ex.message) enqueueSnackbar(ex.message);
+    }
+  };
 
   const { latitude, longitude } = useMemo(
     () =>
@@ -141,9 +241,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
 
   const [tabIndex, setTabIndex] = useState(0);
   const theme = useTheme();
-  const [doctorAvailability, setDoctorAvailability] = useState<DoctorAvailability>(DoctorAvailability.Weekdays);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-  const [officeHours, setOfficeHours] = useState<OfficeHours>(defaultOfficeHours);
 
   const { isLoaded: isMapLoaded } = useLoadScript({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY as string,
@@ -152,14 +250,9 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
   const pinMapOptions: google.maps.MapOptions = {
     styles: mapStyles,
     disableDefaultUI: true,
-    fullscreenControl: true,
+    fullscreenControl: false,
     zoomControl: true,
-  };
-
-  const previewMapOptions: google.maps.MapOptions = {
-    styles: mapStyles,
-    disableDefaultUI: true,
-    draggable: false,
+    zoom: 17,
   };
 
   const [consultationPricing, setConsultationPricing] = useState(0);
@@ -214,76 +307,9 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
     [form, submit],
   );
 
-  const handleOfficeHoursChange = useCallback(
-    (hours: OfficeHours) => {
-      setOfficeHours(hours);
-
-      const schedules = [
-        {
-          daysOfWeek: [WeekDay.Monday, WeekDay.Tuesday, WeekDay.Wednesday, WeekDay.Thursday, WeekDay.Friday],
-          startTime: moment.utc(hours.weekdayStart).format('HH:mm'),
-          endTime: moment.utc(hours.weekdayEnd).format('HH:mm'),
-        } as PractitionerSchedule,
-        !!(hours.saturdayStart && hours.saturdayEnd) &&
-          ({
-            daysOfWeek: [WeekDay.Saturday],
-            startTime: moment.utc(hours.saturdayStart).format('HH:mm'),
-            endTime: moment.utc(hours.saturdayEnd).format('HH:mm'),
-          } as PractitionerSchedule),
-        !!(hours.sundayStart && hours.sundayEnd) &&
-          ({
-            daysOfWeek: [WeekDay.Sunday],
-            startTime: moment.utc(hours.sundayStart).format('HH:mm'),
-            endTime: moment.utc(hours.sundayEnd).format('HH:mm'),
-          } as PractitionerSchedule),
-      ].filter(Boolean);
-
-      form.setFieldValue('schedules', schedules);
-
-      submit();
-    },
-    [setOfficeHours, form, submit],
-  );
-
-  const handleAvailabilityChange = useCallback(
-    (availability: DoctorAvailability) => {
-      setDoctorAvailability(availability);
-
-      let newOfficeHours: OfficeHours;
-
-      switch (availability) {
-        case DoctorAvailability.Weekdays:
-          newOfficeHours = ['weekdayStart', 'weekdayEnd'].reduce(
-            (memo, key) => ({
-              ...memo,
-              [key]: availableOfficeHours[key as keyof OfficeHours],
-            }),
-            {},
-          ) as OfficeHours;
-          break;
-
-        case DoctorAvailability.WeekdaysAndSat:
-          newOfficeHours = ['weekdayStart', 'weekdayEnd', 'saturdayStart', 'saturdayEnd'].reduce(
-            (memo, key) => ({
-              ...memo,
-              [key]: availableOfficeHours[key as keyof OfficeHours],
-            }),
-            {},
-          ) as OfficeHours;
-          break;
-        default:
-          newOfficeHours = { ...availableOfficeHours };
-          break;
-      }
-
-      handleOfficeHoursChange(newOfficeHours);
-    },
-    [setDoctorAvailability, handleOfficeHoursChange],
-  );
-
   const avatarView = form.values.avatarUrl ? (
     <img
-      src={form.values.avatarUrl}
+      src={practitionerInfo?.avatarUrl ?? undefined}
       style={{ height: '90px', width: '90px', borderRadius: '25px' }}
       alt={practitionerInfo?.title}
     />
@@ -293,139 +319,503 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
 
   const doctorInfoView = tabIndex === 0 && (
     <Grid direction="column" spacing={1} container>
-      <Grid item container alignContent="center" alignItems="center">
-        <Grid item md={4} xs>
-          <p>Title</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <TextField
-            name="title"
-            value={form.values.title}
-            onChange={handleChange}
-            onBlur={form.handleBlur}
-            variant="filled"
-            margin="none"
-            id="name-input"
-            fullWidth
-          />
-        </Grid>
-      </Grid>
-      <Grid item container alignContent="center" alignItems="center">
-        <Grid item md={4} xs>
-          <p>Category</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <Select
-            disableUnderline
-            name="category"
-            value={form.values.category}
-            onChange={handleChange}
-            onBlur={form.handleBlur}
-            variant="filled"
-            displayEmpty
-            fullWidth
-          >
-            {Object.entries(DoctorCategories).map(([value, label]) => (
-              <MenuItem key={value} value={value}>
-                {label}
-              </MenuItem>
+      <Accordion elevation={0}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="panel2a-content" id="panel2a-header">
+          <Typography component="h5" variant="h5">
+            General
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid direction="column" spacing={1} container>
+            <Box height="10px" />
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Title{' '}
+                  <span>
+                    <Tooltip
+                      title="The title of the listing as it will be shown on the app"
+                      aria-label="title-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="title"
+                value={form.values.title}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="name-input"
+                fullWidth
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Email{' '}
+                  <span>
+                    <Tooltip
+                      title="The email used for receiving notifications about newly created appointments"
+                      aria-label="email-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="email"
+                value={form.values.email}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                fullWidth
+                type="email"
+                inputMode="email"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Phone{' '}
+                  <span>
+                    <Tooltip
+                      title="The phone number used for patient communication"
+                      aria-label="phone-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="phone"
+                value={form.values.phone}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                fullWidth
+                inputMode="tel"
+                placeholder="+27123423453"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Bio{' '}
+                  <span>
+                    <Tooltip
+                      title="The description used to present the practitioner to the potential patients"
+                      aria-label="bio-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="bio"
+                value={form.values.bio}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                fullWidth
+                multiline
+                rows={3}
+              />
+              <Box height="10px" />
+            </Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+      <Box height="10px" />
+      <Accordion elevation={0}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="address-content" id="address-header">
+          <Typography component="h5" variant="h5">
+            Address
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid direction="column" spacing={1} container>
+            <Box height="10px" />
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Line 1{' '}
+                  <span>
+                    <Tooltip
+                      title="The street address where the practitioner is located"
+                      aria-label="address-line1-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="line1"
+                value={form.values.line1}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="line1-input"
+                fullWidth
+                placeholder="e.g. 321 Main Street"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Line 2{' '}
+                  <span>
+                    <Tooltip
+                      title="The apartment, suite or space number (or any other designation not literally part of the physical address)"
+                      aria-label="address-line2-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="line2"
+                value={form.values.line2}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="line2-input"
+                fullWidth
+                placeholder="e.g. Minessori Health Center 2nd floor"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Suburb{' '}
+                  <span>
+                    <Tooltip
+                      title="The suburb where the practitioner is located"
+                      aria-label="address-suburb-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="suburb"
+                value={form.values.suburb}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="suburb-input"
+                fullWidth
+                placeholder="e.g. Sea Point"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  City{' '}
+                  <span>
+                    <Tooltip
+                      title="The city where the practitioner is located"
+                      aria-label="address-city-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="city"
+                value={form.values.city}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="city-input"
+                fullWidth
+                placeholder="e.g. Cape Town"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Postal code{' '}
+                  <span>
+                    <Tooltip
+                      title="The postal code where the practitioner is located"
+                      aria-label="address-postal-code-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="postal-code"
+                value={form.values.postalCode}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="postal-code-input"
+                fullWidth
+                placeholder="e.g. 2645"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  State / Province / County{' '}
+                  <span>
+                    <Tooltip
+                      title="The state, province or county where the city is located"
+                      aria-label="address-spc-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="spc"
+                value={form.values.stateProvinceCounty}
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="spc-input"
+                fullWidth
+                placeholder="e.g. Western Cape"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Country{' '}
+                  <span>
+                    <Tooltip
+                      title="The country where the practitioner is located"
+                      aria-label="address-spc-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+              <TextField
+                name="spc"
+                value={form.values.country}
+                disabled
+                onChange={handleChange}
+                onBlur={form.handleBlur}
+                variant="filled"
+                margin="none"
+                id="spc-input"
+                fullWidth
+                placeholder="e.g. South Africa"
+              />
+              <Box height="10px" />
+            </Grid>
+            <Grid item container alignContent="flex-start" direction="column" alignItems="flex-start">
+              <Box paddingLeft="12px">
+                <Typography component="h6" variant="h6">
+                  Pin location{' '}
+                  <span>
+                    <Tooltip
+                      title="The location of the practitioner on the map"
+                      aria-label="address-spc-help"
+                      placement="right"
+                      arrow
+                    >
+                      <HelpIcon fontSize="small" style={{ color: 'grey' }} />
+                    </Tooltip>
+                  </span>
+                </Typography>
+              </Box>
+              <Box height="5px" />
+            </Grid>
+            <Grid item md={12} xs style={{ position: 'relative' }}>
+              {isMapLoaded && (
+                <GoogleMap
+                  mapContainerClassName="map-container"
+                  zoom={10}
+                  center={center}
+                  options={(pinMapOptions as unknown) as google.maps.MapOptions}
+                  onLoad={onPinMapLoad}
+                  onCenterChanged={handleCenterChange}
+                  ref={(ref) => setPinMapRef(ref)}
+                />
+              )}
+              <div className="marker-container">
+                <MapPin color="#2D6455" size="40px" />
+                <div style={{ height: 40, width: 40 }} />
+              </div>
+            </Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+      <Accordion elevation={0}>
+        <AccordionSummary expandIcon={<ChevronDown />} aria-controls="address-content" id="address-header">
+          <Typography component="h5" variant="h5">
+            Schedule
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid direction="column" spacing={1} container>
+            <Alert severity="warning">
+              Modifying the schedules in this list will affect all your future appointments (but not appointments
+              already confirmed)!
+            </Alert>
+            <Box height="10px" />
+            <Typography component="p" variant="body1">
+              Timezone: South Africa Standard Time (GMT+2)
+            </Typography>
+            <Box height="20px" />
+            {form.values.schedules?.map((s, i) => (
+              <ScheduleItem
+                id={i.toString()}
+                schedule={s}
+                timeSlotSize={form.values.appointmentTimeSlot}
+                onChange={(newSchedule) =>
+                  form.setFieldValue(
+                    'schedules',
+                    form.values.schedules.map((oldSchedule, index) => {
+                      if (i === index) {
+                        return newSchedule;
+                      }
+                      return oldSchedule;
+                    }),
+                  )
+                }
+                onRemove={() =>
+                  form.setFieldValue(
+                    'schedules',
+                    form.values.schedules.filter((_, index) => index !== i),
+                  )
+                }
+              />
             ))}
-          </Select>
-        </Grid>
-      </Grid>
-      <Grid item container alignContent="center" alignItems="center">
-        <Grid item md={4} xs>
-          <p>Email</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <TextField
-            name="email"
-            value={form.values.email}
-            onChange={handleChange}
-            onBlur={form.handleBlur}
-            variant="filled"
-            margin="none"
-            fullWidth
-            type="email"
-            inputMode="email"
-          />
-        </Grid>
-      </Grid>
-      <Grid item container alignContent="center" alignItems="center">
-        <Grid item md={4} xs>
-          <p>Phone</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <TextField
-            name="phone"
-            value={form.values.phone}
-            onChange={handleChange}
-            onBlur={form.handleBlur}
-            variant="filled"
-            margin="none"
-            fullWidth
-            inputMode="tel"
-          />
-        </Grid>
-      </Grid>
-      <Grid item container>
-        <Grid item md={4} xs>
-          <p>Bio</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <TextField
-            name="bio"
-            value={form.values.bio}
-            onChange={handleChange}
-            onBlur={form.handleBlur}
-            variant="filled"
-            margin="none"
-            fullWidth
-            multiline
-            rows={3}
-          />
-        </Grid>
-      </Grid>
-      <Grid item container>
-        <Grid item md={4} xs>
-          <p>Address</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <TextField
-            name="address"
-            value={form.values.address}
-            onChange={handleChange}
-            onBlur={form.handleBlur}
-            variant="filled"
-            margin="none"
-            fullWidth
-            inputMode="text"
-            multiline
-            rows={2}
-          />
-        </Grid>
-      </Grid>
-      <Grid item container>
-        <Grid item md={4} xs>
-          <p>Pin location</p>
-        </Grid>
-        <Grid item md={8} xs style={{ position: 'relative' }}>
-          {isMapLoaded && (
-            <GoogleMap
-              mapContainerClassName="map-container"
-              zoom={10}
-              center={center}
-              options={(pinMapOptions as unknown) as google.maps.MapOptions}
-              onLoad={onPinMapLoad}
-              onCenterChanged={handleCenterChange}
-              ref={(ref) => setPinMapRef(ref)}
+            <Box height="20px" />
+            <Grid item>
+              <Button
+                color="primary"
+                variant="outlined"
+                disableElevation
+                onClick={() =>
+                  form.setFieldValue('schedules', [
+                    ...form.values.schedules,
+                    {
+                      dayOfWeek: 1,
+                      startTime: DateTime.now().setZone(timezone).set({ hour: 9, minute: 0 }),
+                      endTime: DateTime.now().setZone(timezone).set({ hour: 17, minute: 0 }),
+                    },
+                  ])
+                }
+              >
+                Add new schedule
+              </Button>
+            </Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+      <Box height="30px" />
+      <Grid item>
+        <Button color="primary" variant="contained" disableElevation onClick={() => submitUpdatedData()}>
+          {form.isSubmitting && (
+            <CircularProgress
+              style={{
+                color: 'white',
+                width: '20px',
+                height: '20px',
+              }}
             />
-          )}
-          <div className="marker-container">
-            <MapPin color="#2D6455" size="40px" />
-            <div style={{ height: 40, width: 40 }} />
-          </div>
-        </Grid>
+          )}{' '}
+          Save changes
+        </Button>
+        <Box width="10px" display="inline-flex" />
+        <Button
+          color="default"
+          variant="text"
+          disableElevation
+          onClick={() => {
+            form.setValues({
+              email: practitionerInfo?.email ?? '',
+              title: practitionerInfo?.title ?? '',
+              location: practitionerInfo?.address?.location,
+              appointmentTimeSlot: practitionerInfo?.appointmentTimeSlot || 15,
+              medicalAids: practitionerInfo?.medicalAids || [],
+              bio: practitionerInfo?.bio || '',
+              avatarUrl: practitionerInfo?.avatarUrl || '',
+              phone: practitionerInfo?.phone,
+              schedules: [],
+              line1: practitionerInfo?.address?.line1 ?? '',
+              line2: practitionerInfo?.address?.line2 ?? '',
+              suburb: practitionerInfo?.address?.suburb ?? '',
+              stateProvinceCounty: practitionerInfo?.address?.stateProvinceCounty ?? '',
+              city: practitionerInfo?.address?.city ?? '',
+              postalCode: practitionerInfo?.address?.postalCode ?? '',
+              //TODO: Update later when we support multiple countries
+              country: 'South Africa',
+            });
+          }}
+        >
+          Discard changes
+        </Button>
       </Grid>
     </Grid>
   );
@@ -453,26 +843,6 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
             <MenuItem value={30}>30 minutes</MenuItem>
             <MenuItem value={45}>45 minutes</MenuItem>
             <MenuItem value={60}>1 hour</MenuItem>
-          </Select>
-        </Grid>
-      </Grid>
-      <Grid item container alignContent="center" alignItems="center">
-        <Grid item md={4} xs>
-          <p>Availability</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <Select
-            id="category-select"
-            disableUnderline
-            value={doctorAvailability}
-            onChange={(event) => handleAvailabilityChange(event.target.value as DoctorAvailability)}
-            variant="filled"
-            displayEmpty
-            fullWidth
-          >
-            <MenuItem value={DoctorAvailability.Weekdays}>Weekdays</MenuItem>
-            <MenuItem value={DoctorAvailability.WeekdaysAndSat}>Weekdays &amp; Saturday</MenuItem>
-            <MenuItem value={DoctorAvailability.AllDays}>Weekdays &amp; Weekend</MenuItem>
           </Select>
         </Grid>
       </Grid>
@@ -556,187 +926,6 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
           </Accordion>
         </Grid>
       </Grid>
-      <Grid item container>
-        <Grid item md={4} xs>
-          <p>Office hours</p>
-        </Grid>
-        <Grid item md={8} xs>
-          <Accordion
-            elevation={0}
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.09)', marginBottom: '10px', borderRadius: 20 }}
-          >
-            <AccordionSummary
-              expandIcon={<ChevronDown />}
-              aria-controls="panel1a-content"
-              id="panel1a-header"
-              style={{ paddingTop: 4, paddingBottom: 4 }}
-            >
-              <Typography color="primary" style={{ fontWeight: 'bold' }}>
-                Hours
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Grid container direction="column" spacing={2}>
-                <Grid container item xs direction="column" spacing={1}>
-                  <Grid item xs>
-                    <Typography color="primary">Monday - Friday</Typography>
-                  </Grid>
-                  <Grid item container xs spacing={1} alignItems="center" justify="space-between">
-                    <Grid item xs>
-                      <KeyboardTimePicker
-                        InputAdornmentProps={{
-                          style: {
-                            padding: 0,
-                          },
-                        }}
-                        inputVariant="filled"
-                        variant="inline"
-                        id="weekday-start-time-picker"
-                        value={officeHours.weekdayStart}
-                        onChange={(date) =>
-                          handleOfficeHoursChange({
-                            ...officeHours,
-                            weekdayStart: date?.toDate() ?? availableOfficeHours.weekdayStart,
-                          })
-                        }
-                      />
-                    </Grid>
-                    <Grid item>
-                      <Typography variant="body1" color="primary" display="inline">
-                        to
-                      </Typography>
-                    </Grid>
-                    <Grid item xs>
-                      <KeyboardTimePicker
-                        InputAdornmentProps={{
-                          style: {
-                            padding: 0,
-                          },
-                        }}
-                        inputVariant="filled"
-                        variant="inline"
-                        id="weekday-end-time-picker"
-                        value={officeHours.weekdayEnd}
-                        onChange={(date) =>
-                          handleOfficeHoursChange({
-                            ...officeHours,
-                            weekdayEnd: date?.toDate() ?? availableOfficeHours.weekdayEnd,
-                          })
-                        }
-                      />
-                    </Grid>
-                  </Grid>
-                </Grid>
-                {(doctorAvailability === DoctorAvailability.WeekdaysAndSat ||
-                  doctorAvailability === DoctorAvailability.AllDays) && (
-                  <Grid item container xs direction="column" spacing={1}>
-                    <Grid item xs>
-                      <Typography color="primary">Saturday</Typography>
-                    </Grid>
-                    <Grid item container xs spacing={1} alignItems="center" justify="space-between">
-                      <Grid item xs>
-                        <KeyboardTimePicker
-                          InputAdornmentProps={{
-                            style: {
-                              padding: 0,
-                            },
-                          }}
-                          inputVariant="filled"
-                          variant="inline"
-                          id="saturday-start-time-picker"
-                          value={officeHours.saturdayStart ?? officeHours.weekdayStart}
-                          onChange={(date) =>
-                            handleOfficeHoursChange({
-                              ...officeHours,
-                              saturdayStart: date?.toDate(),
-                            })
-                          }
-                        />
-                      </Grid>
-                      <Grid item>
-                        <Typography variant="body1" color="primary" display="inline">
-                          to
-                        </Typography>
-                      </Grid>
-                      <Grid item xs>
-                        <KeyboardTimePicker
-                          InputAdornmentProps={{
-                            style: {
-                              padding: 0,
-                            },
-                          }}
-                          inputVariant="filled"
-                          variant="inline"
-                          id="saturday-end-time-picker"
-                          value={officeHours.saturdayEnd ?? officeHours.weekdayEnd}
-                          onChange={(date) =>
-                            handleOfficeHoursChange({
-                              ...officeHours,
-                              saturdayEnd: date?.toDate(),
-                            })
-                          }
-                        />
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                )}
-                {doctorAvailability === DoctorAvailability.AllDays && (
-                  <Grid item container xs direction="column" spacing={1}>
-                    <Grid item xs>
-                      <Typography color="primary">Sunday</Typography>
-                    </Grid>
-                    <Grid item container xs spacing={1} alignItems="center" justify="space-between">
-                      <Grid item xs>
-                        <KeyboardTimePicker
-                          InputAdornmentProps={{
-                            style: {
-                              padding: 0,
-                            },
-                          }}
-                          inputVariant="filled"
-                          variant="inline"
-                          id="sunday-start-time-picker"
-                          value={officeHours.sundayStart ?? officeHours.weekdayStart}
-                          onChange={(date) =>
-                            handleOfficeHoursChange({
-                              ...officeHours,
-                              sundayStart: date?.toDate(),
-                            })
-                          }
-                        />
-                      </Grid>
-                      <Grid item>
-                        <Typography variant="body1" color="primary" display="inline">
-                          to
-                        </Typography>
-                      </Grid>
-                      <Grid item xs>
-                        <KeyboardTimePicker
-                          InputAdornmentProps={{
-                            style: {
-                              padding: 0,
-                            },
-                          }}
-                          inputVariant="filled"
-                          variant="inline"
-                          id="weekday-end-time-picker"
-                          value={officeHours.sundayEnd ?? officeHours.weekdayEnd}
-                          onChange={(date) =>
-                            handleOfficeHoursChange({
-                              ...officeHours,
-                              sundayEnd: date?.toDate(),
-                            })
-                          }
-                        />
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                )}
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-        </Grid>
-      </Grid>
       <Grid item container alignContent="center" alignItems="center">
         <Grid item md={4} xs>
           <p>Account options</p>
@@ -802,7 +991,7 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
       <Box display="flex" alignItems="center" justifyContent="space-between">
         <h1>My profile</h1>
         <Box display="flex" alignItems="center">
-          <p>We are eager to help you.</p>
+          <p>We are here to help you.</p>
           <Box width="20px" />
           <Button
             color="primary"
@@ -816,8 +1005,9 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
           </Button>
         </Box>
       </Box>
-      <Grid container spacing={4}>
-        <Grid item xs lg={7} xl={8}>
+      <Grid container>
+        <Grid item md={1}></Grid>
+        <Grid item lg={9} md={10} xs={12}>
           <Box className="profile-header-container">
             <Grid container>
               <Grid item lg={9} sm={12} style={{ display: 'flex', alignItems: 'center' }}>
@@ -842,18 +1032,16 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
                   <Typography variant="h4" style={{ fontWeight: 'bold' }} color="primary">
                     {practitionerInfo?.title}
                   </Typography>
-                  <Typography variant="h5">{practitionerInfo && DoctorCategories[form.values.category]}</Typography>
+                  <Typography variant="h5">{DoctorCategories[practitionerInfo?.category ?? 0]}</Typography>
                 </Box>
               </Grid>
               <Grid item lg={3} sm={12} className="account-status-box">
-                <Box textAlign="center">
-                  {practitionerInfo?.isActive ? 'Account is active' : 'Account is not active'}
-                </Box>
+                <Box textAlign="center">{`Your Listing is${practitionerInfo?.isActive ? '' : ' not'}  active`}</Box>
               </Grid>
             </Grid>
             <Box height="30px" />
             <StyledTabs value={tabIndex} onChange={(_, newValue) => setTabIndex(newValue)} textColor="primary">
-              <StyledTab label="My profile" />
+              <StyledTab label="Listing details" />
               <StyledTab label="Settings" />
               <StyledTab label="FAQs" />
             </StyledTabs>
@@ -862,122 +1050,6 @@ export const ProfilePage = observer((props: RouteComponentProps) => {
             {doctorInfoView}
             {settings}
             {faq}
-          </Box>
-        </Grid>
-        <Grid item xl={4} lg={5} xs>
-          <Box className="data-container" justifyContent="center">
-            <h2>Listing preview</h2>
-            <Box height="30px" />
-            <Box className="listing-preview-container">
-              <Box height="40%" width="100%" position="relative">
-                <Box className="icons-container">
-                  <div className="icon-button-container">
-                    <X size={24} />
-                  </div>
-                  <Box flexGrow="1" />
-                  <div className="icon-button-container">
-                    <Share size={24} />
-                  </div>
-                  <Box width="10px" />
-                  <div className="icon-button-container">
-                    <Heart size={24} />
-                  </div>
-                </Box>
-                <Box className="avatar-rating-container">
-                  <Box position="relative" height="105px">
-                    {avatarView}
-                    <div className="rating-container">
-                      <Star size="15px" />
-                      <span>4.8</span>
-                    </div>
-                  </Box>
-                </Box>
-
-                <Box width="100%" height="80%" position="relative" marginBottom="60px">
-                  {isMapLoaded && (
-                    <GoogleMap
-                      mapContainerClassName="listing-preview-map-container"
-                      zoom={10}
-                      center={center}
-                      options={(previewMapOptions as unknown) as google.maps.MapOptions}
-                    />
-                  )}
-                  <div className="marker-container">
-                    <MapPin color="#2D6455" size="20px" />
-                    <div style={{ height: 20, width: 20 }} />
-                  </div>
-                </Box>
-              </Box>
-              <Box justifyContent="center" textAlign="center">
-                <Typography
-                  display="inline"
-                  variant="h6"
-                  style={{ fontWeight: 'bold' }}
-                  className="listing-doctor-title"
-                  color="primary"
-                >
-                  {practitionerInfo?.title}
-                </Typography>
-                <p>{practitionerInfo && DoctorCategories[practitionerInfo?.category]}</p>
-              </Box>
-              {practitionerInfo?.bio && (
-                <Box position="relative" height="20%" marginTop="16px" margin="16px 18px 0px 18px">
-                  <Box className="icon-header-container">
-                    <BookOpen size="20px" />
-                  </Box>
-                  <Box className="bio-info-container">
-                    <Typography variant="body1" align="center">
-                      {practitionerInfo?.bio}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-              {/* TODO: Get values from practitionerInfo */}
-              <Box flexDirection="row" display="flex" margin="0px 18px" height="25%">
-                <Box position="relative" width="50%" marginTop="10px" display="flex">
-                  <Box className="icon-header-container">
-                    <DollarSign size="20px" />
-                  </Box>
-                  <Box className="practice-info-container">
-                    <Typography variant="body1" align="center">
-                      R400 - R499
-                    </Typography>
-                    <Typography variant="body1" align="center">
-                      per consultation
-                    </Typography>
-                    <Box height="10px" />
-                    <Box display="flex" flexDirection="row">
-                      <img className="medical-aid-img" src={discovery} alt="" />
-                      <img className="medical-aid-img" src={momentum} alt="" />
-                      <img className="medical-aid-img" src={bonitas} alt="" />
-                      <img className="medical-aid-img" src={medshield} alt="" />
-                      <span className="medical-aid-img"> +2</span>
-                    </Box>
-                  </Box>
-                </Box>
-                <Box width="10px" />
-                <Box position="relative" width="50%" marginTop="10px" display="flex">
-                  <Box className="icon-header-container">
-                    <Calendar size="20px" />
-                  </Box>
-                  <Box className="practice-info-container">
-                    <Typography variant="body1" align="center">
-                      Mon - Fri
-                    </Typography>
-                    <Typography variant="body1" align="center">
-                      08:00 - 17:00
-                    </Typography>
-                    <Box height="10px" />
-                    <Typography variant="body1" align="center">
-                      Sat
-                    </Typography>
-                    <Typography variant="body1" align="center">
-                      09:00 - 13:00
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
           </Box>
         </Grid>
       </Grid>
@@ -1057,3 +1129,110 @@ const AvatarOverlay = withStyles({
     },
   },
 })(Box);
+
+function validateSchedule(
+  schedule: FlattenedSchedule,
+  timeSlotSize: number,
+): { isValid: boolean; errorMessage?: string } {
+  const { startTime, endTime } = schedule;
+  if (endTime.diff(startTime, 'minutes').minutes < timeSlotSize) {
+    return {
+      isValid: false,
+      errorMessage: `The end time of this schedule has to be at least ${timeSlotSize} minutes after its start time.`,
+    };
+  }
+
+  return {
+    isValid: true,
+  };
+}
+const ScheduleItem = function (props: {
+  id: string;
+  schedule: FlattenedSchedule;
+  onChange: (newSchedule: FlattenedSchedule) => void;
+  onRemove: () => void;
+  timeSlotSize: number;
+}) {
+  const { schedule, onChange, onRemove, id, timeSlotSize } = props;
+  const { dayOfWeek, startTime, endTime } = schedule;
+  const validationResponse = validateSchedule(schedule, timeSlotSize);
+
+  return (
+    <Grid container item spacing={2} direction="column">
+      <Grid container item spacing={3} alignItems="center">
+        <Grid item xs={3} md={3}>
+          <Select
+            id="appointment-slot-select"
+            name="appointmentTimeSlot"
+            disableUnderline
+            value={dayOfWeek}
+            onChange={(event) => onChange({ ...schedule, dayOfWeek: event.target.value as number })}
+            fullWidth
+            variant="filled"
+          >
+            <MenuItem value={1}>Monday</MenuItem>
+            <MenuItem value={2}>Tuesday</MenuItem>
+            <MenuItem value={3}>Wednesday</MenuItem>
+            <MenuItem value={4}>Thursday</MenuItem>
+            <MenuItem value={5}>Friday</MenuItem>
+            <MenuItem value={6}>Saturday</MenuItem>
+            <MenuItem value={7}>Sunday</MenuItem>
+          </Select>
+        </Grid>
+        <Grid item xs={false} md={1}></Grid>
+        <Grid item xs={3} md={3}>
+          <StyledTimePicker
+            margin="dense"
+            id={`start-time-picker-${id}`}
+            label="Start time"
+            value={startTime}
+            onChange={(date) => onChange({ ...schedule, startTime: date ?? startTime })}
+            KeyboardButtonProps={{
+              'aria-label': 'start time',
+            }}
+            format="HH:mm"
+            inputVariant="filled"
+            variant="inline"
+          />
+        </Grid>
+        <Grid item xs={false} md={1}></Grid>
+        <Grid item xs={3} md={3}>
+          <StyledTimePicker
+            margin="dense"
+            id={`end-time-picker-${id}`}
+            label="End time"
+            value={endTime}
+            onChange={(date) => onChange({ ...schedule, endTime: date ?? endTime })}
+            KeyboardButtonProps={{
+              'aria-label': 'end time',
+            }}
+            format="HH:mm"
+            inputVariant="filled"
+            variant="inline"
+            //maxDateMessage
+          />
+        </Grid>
+        <Grid item xs={1} md={1}>
+          <IconButton aria-label="delete" onClick={() => onRemove()}>
+            <DeleteIcon />
+          </IconButton>
+        </Grid>
+      </Grid>
+      <Grid item container alignContent="flex-end">
+        {!validationResponse.isValid && <ErrorText variant="body2">{validationResponse.errorMessage}</ErrorText>}
+      </Grid>
+    </Grid>
+  );
+};
+const StyledTimePicker = withStyles({
+  root: {
+    borderRadius: 15,
+  },
+})(KeyboardTimePicker);
+
+const ErrorText = withStyles({
+  root: {
+    color: 'red',
+    textAlign: 'end',
+  },
+})(Typography);

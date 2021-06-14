@@ -22,7 +22,7 @@ import {
 } from '@material-ui/core';
 import { KeyboardTimePicker, KeyboardDatePicker } from '@material-ui/pickers';
 import { CirclePicker } from 'react-color';
-import moment from 'moment';
+import { DateTime } from 'luxon';
 
 interface PractitionerCalendarEvent {
   title: string;
@@ -64,8 +64,8 @@ export const CreateEventModal = (props: {
   const [isCreateEventOpen, setCreateEventOpen] = useState(open);
 
   const isCreateEventDisabled = (): boolean => {
-    const mStartDate = moment(startDate);
-    const mEndDate = moment(endDate);
+    const mStartDate = DateTime.fromJSDate(startDate);
+    const mEndDate = DateTime.fromJSDate(endDate);
     if (isAllDay) {
       return mEndDate < mStartDate;
     }
@@ -123,11 +123,11 @@ export const CreateEventModal = (props: {
 
   useEffect(() => {
     if (isAllDayEvent) {
-      setStartDate(moment(startDate).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).toDate());
+      setStartDate(DateTime.fromJSDate(startDate).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).toJSDate());
       setEndDate(
-        moment(endDate ?? startDate)
+        DateTime.fromJSDate(endDate ?? startDate)
           .set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
-          .toDate(),
+          .toJSDate(),
       );
     }
   }, [isAllDayEvent]);
@@ -296,7 +296,7 @@ export const CreateEventModal = (props: {
                     onChange={(date) =>
                       setRecurrenceEnd({
                         ...recurrenceEnd,
-                        endDate: date?.toDate() ?? new Date(),
+                        endDate: date?.toJSDate() ?? new Date(),
                       })
                     }
                     KeyboardButtonProps={{
@@ -432,12 +432,12 @@ export const CreateEventModal = (props: {
                     }}
                     inputVariant="filled"
                     variant="inline"
-                    format="DD/MM/yyyy"
+                    format="dd/MM/yyyy"
                     margin="dense"
                     id="start-date-picker"
                     label={isAllDayEvent ? 'From' : 'Start date'}
                     value={startDate}
-                    onChange={(date) => setStartDate(date?.toDate() ?? new Date())}
+                    onChange={(date) => setStartDate(date?.toJSDate() ?? new Date())}
                     KeyboardButtonProps={{
                       'aria-label': 'change date',
                     }}
@@ -455,10 +455,11 @@ export const CreateEventModal = (props: {
                         }}
                         inputVariant="filled"
                         variant="inline"
+                        format="HH:mm"
                         id="start-time-picker"
                         label="Start time"
                         value={startDate}
-                        onChange={(date) => setStartDate(date?.toDate() ?? new Date())}
+                        onChange={(date) => setStartDate(date?.toJSDate() ?? new Date())}
                         KeyboardButtonProps={{
                           'aria-label': 'change time',
                         }}
@@ -479,12 +480,12 @@ export const CreateEventModal = (props: {
                     }}
                     inputVariant="filled"
                     variant="inline"
-                    format="DD/MM/yyyy"
+                    format="dd/MM/yyyy"
                     margin="dense"
                     id="end-date-picker"
                     label={isAllDayEvent ? 'To' : 'End date'}
                     value={endDate}
-                    onChange={(date) => setEndDate(date?.toDate() ?? new Date())}
+                    onChange={(date) => setEndDate(date?.toJSDate() ?? new Date())}
                     KeyboardButtonProps={{
                       'aria-label': 'change date',
                     }}
@@ -502,10 +503,11 @@ export const CreateEventModal = (props: {
                         }}
                         inputVariant="filled"
                         variant="inline"
+                        format="HH:mm"
                         id="end-time-picker"
                         label="End time"
                         value={endDate}
-                        onChange={(date) => setEndDate(date?.toDate() ?? new Date())}
+                        onChange={(date) => setEndDate(date?.toJSDate() ?? new Date())}
                         KeyboardButtonProps={{
                           'aria-label': 'change time',
                         }}
@@ -554,7 +556,7 @@ export const CreateEventModal = (props: {
             disabled={isCreateEventDisabled()}
             onClick={() => {
               setCreateEventOpen(false);
-              const endEventDate = moment(endDate).add(1, 'day').toDate();
+              const endEventDate = DateTime.fromJSDate(endDate).plus({ day: 1 }).toJSDate();
               onCreateEvent({
                 startTime: startDate,
                 endTime: isAllDayEvent ? endEventDate : endDate,

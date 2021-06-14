@@ -1,10 +1,10 @@
 import Appointment from 'common/gql-types/appointment';
-import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { Popover, Box, Grid, IconButton, Typography, Divider, Tooltip } from '@material-ui/core';
 import { Video, Trash2, X, CheckCircle, User, XCircle, Copy } from 'react-feather';
 import './appointment-overview-popover.scss';
 import { Point } from '../shared/point';
+import { DateTime } from 'luxon';
 
 interface AppointmentOverviewPopoverProps {
   open: boolean;
@@ -13,8 +13,8 @@ interface AppointmentOverviewPopoverProps {
   appointment: Appointment;
   position: Point;
 }
-const longDateCardFormat = 'dddd, DD MMMM HH:mm';
-const shortDateCardFormat = 'ddd, DD MMM HH:mm';
+const longDateCardFormat = 'cccc, dd LLLL HH:mm';
+const shortDateCardFormat = 'ccc, dd LLL HH:mm';
 
 export default function AppointmentOverviewPopover(props: AppointmentOverviewPopoverProps) {
   const { open, onClose, appointment, onCancelClick, position: popoverPosition } = props;
@@ -24,9 +24,9 @@ export default function AppointmentOverviewPopover(props: AppointmentOverviewPop
     startTime.getFullYear() === endTime.getFullYear() &&
     startTime.getMonth() === endTime.getMonth() &&
     startTime.getDay() === endTime.getDay();
-  const startLongDateCard = moment(startTime).format(longDateCardFormat);
-  const startShortDateCard = moment(startTime).format(shortDateCardFormat);
-  const endShortDateCard = moment(endTime).format(shortDateCardFormat);
+  const startLongDateCard = DateTime.fromJSDate(startTime).toFormat(longDateCardFormat);
+  const startShortDateCard = DateTime.fromJSDate(startTime).toFormat(shortDateCardFormat);
+  const endShortDateCard = DateTime.fromJSDate(endTime).toFormat(shortDateCardFormat);
 
   const [position, setPosition] = useState<Point>(popoverPosition);
   const [isOpen, setOpen] = useState(open);
@@ -97,7 +97,7 @@ export default function AppointmentOverviewPopover(props: AppointmentOverviewPop
         <Grid direction="row" alignItems="center" container>
           <Typography variant="body2">
             {startAndEndDateSameDay()
-              ? `${startLongDateCard} - ${moment(endTime).format('HH:mm')}`
+              ? `${startLongDateCard} - ${DateTime.fromJSDate(endTime).toFormat('HH:mm')}`
               : `${startShortDateCard} - ${endShortDateCard}`}
           </Typography>
         </Grid>

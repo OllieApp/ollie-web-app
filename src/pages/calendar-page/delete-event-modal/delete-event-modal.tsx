@@ -8,7 +8,7 @@ import {
   DialogTitle,
   Typography,
 } from '@material-ui/core';
-import moment from 'moment';
+import { DateTime } from 'luxon';
 import React, { useState, useEffect } from 'react';
 import './delete-event-modal.scss';
 
@@ -54,10 +54,14 @@ export function DeleteEventModal(props: DeleteEventModalProps) {
             <Typography variant="body1" component="p">
               You are about to <span className="semi-bold-text">delete</span> your{' '}
               <span className="semi-bold-text">{eventTitle}</span> event starting on{' '}
-              <span className="semi-bold-text">{moment(startDate).format('dddd, DD MMMM')}</span> at{' '}
-              <span className="semi-bold-text">{moment(startDate).format('hh:mmA')}</span> and ending on{' '}
-              <span className="semi-bold-text">{moment(endDate).format('dddd, DD MMMM')}</span> at{' '}
-              <span className="semi-bold-text">{moment(endDate).format('hh:mmA')}</span>.
+              <span className="semi-bold-text">
+                {startDate && DateTime.fromJSDate(startDate).toFormat('cccc, dd LLL')}
+              </span>{' '}
+              at{' '}
+              <span className="semi-bold-text">{startDate && DateTime.fromJSDate(startDate).toFormat('hh:mma')}</span>{' '}
+              and ending on{' '}
+              <span className="semi-bold-text">{endDate && DateTime.fromJSDate(endDate).toFormat('cccc, dd LLL')}</span>{' '}
+              at <span className="semi-bold-text">{endDate && DateTime.fromJSDate(endDate).toFormat('hh:mma')}</span>.
             </Typography>
             <Box height="20px" />
             <Typography variant="body1" component="p">

@@ -1,3 +1,4 @@
+import { UpdatePractitionerRequest } from './../requests/update-practitioner.request';
 import { observable, action, computed } from 'mobx';
 import firebase from 'firebase';
 import { AxiosResponse } from 'axios';
@@ -183,10 +184,10 @@ export default class UserStore {
     this.authStatus = 'out';
   }
 
-  @action async updatePractitionerProfile(data: Partial<Practitioner> & Partial<User>): Promise<void> {
+  @action async updatePractitionerProfile(data: UpdatePractitionerRequest): Promise<void> {
     if (!this.practitionerIds) return;
 
-    await OllieAPI.patch<Practitioner>(`/practitioners/${this.practitionerIds[0]}`, data);
+    await OllieAPI.patch(`/practitioners/${this.practitionerIds[0]}`, data);
     await this.fetchPractitionerInfo();
   }
 
@@ -196,9 +197,16 @@ export default class UserStore {
     const formData = new FormData();
     formData.append('file', file);
 
-    await OllieAPI.post<Practitioner>(`/practitioners/avatar/${this.practitionerIds[0]}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const newUrl = (
+      await OllieAPI.post<string>(`/practitioners/avatar/${this.practitionerIds[0]}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    ).data;
+
+    this.practitionerInfo = {
+      ...this.practitionerInfo,
+      avatarUrl: newUrl ?? this.practitionerInfo?.avatarUrl,
+    } as Practitioner;
 
     await this.fetchPractitionerInfo();
   }

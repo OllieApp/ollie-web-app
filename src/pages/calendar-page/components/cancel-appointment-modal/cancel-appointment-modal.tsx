@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from '@material-ui/core';
-import moment from 'moment';
+import { DateTime } from 'luxon';
 import React, { useState, useEffect } from 'react';
 import { ExternalLink } from 'react-feather';
 import './cancel-appointment-modal.scss';
@@ -64,12 +64,16 @@ export function CancelAppointmentModal(props: CancelAppointmentModalProps) {
       <Container className="cancel-appointment-dialog-container">
         <DialogTitle id="form-dialog-title">Cancel appointment?</DialogTitle>
         <DialogContent style={{ overflowY: 'hidden' }}>
-          <Typography variant="body1" component="p">
-            You are about to <span className="semi-bold-text">cancel</span> your appointment with {}
-            <span className="semi-bold-text">{userFullName}</span> {}
-            on <span className="semi-bold-text">{moment(startDate).format('dddd, DD MMMM')}</span> at {}
-            <span className="semi-bold-text">{moment(startDate).format('hh:mmA')}</span>.
-          </Typography>
+          {startDate && (
+            <Typography variant="body1" component="p">
+              You are about to <span className="semi-bold-text">cancel</span> your appointment with {}
+              <span className="semi-bold-text">{userFullName}</span> {}
+              on <span className="semi-bold-text">
+                {DateTime.fromJSDate(startDate).toFormat('cccc, dd LLL')}
+              </span> at {}
+              <span className="semi-bold-text">{DateTime.fromJSDate(startDate).toFormat('hh:mmA')}</span>.
+            </Typography>
+          )}
           <Box height="20px" />
           <Typography variant="body1" component="p">
             To cancel this appointment, you will need to provide a valid reason for the cancellation to happen.

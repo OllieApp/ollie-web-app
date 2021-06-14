@@ -1,7 +1,7 @@
 import { Box, Grid, IconButton, Popover, Tooltip, Typography } from '@material-ui/core';
 import { Fullscreen } from '@material-ui/icons';
 import PractitionerEvent from 'common/gql-types/practitioner-event';
-import moment from 'moment';
+import { DateTime } from 'luxon';
 import React, { useState, useEffect } from 'react';
 import { Trash2, X, Edit, MapPin, AlignLeft } from 'react-feather';
 import { Point } from '../shared/point';
@@ -19,19 +19,19 @@ interface PractitionerEventOverviewPopoverProps {
 
 export function PractitionerEventOverviewPopover(props: PractitionerEventOverviewPopoverProps) {
   const { open, onClose, event, onDeleteClick, onEditClick, onExpandClick, position } = props;
-  const startTime = moment(event?.start_time ?? '');
-  const endTime = moment(event?.end_time ?? '');
+  const startTime = DateTime.fromISO(event?.start_time ?? '');
+  const endTime = DateTime.fromISO(event?.end_time ?? '');
   const startAndEndDateSameDay = () =>
-    startTime.year() === endTime.year() && startTime.month() === endTime.month() && startTime.day() === endTime.day();
-  const longDateFormat = 'dddd, DD MMMM';
-  const shortDateFormat = 'ddd, DD MMM';
+    startTime.year === endTime.year && startTime.month === endTime.month && startTime.day === endTime.day;
+  const longDateFormat = 'cccc, dd LLLL';
+  const shortDateFormat = 'ccc, dd LLL';
   const timeFormat = 'HH:mm';
 
   const dateDisplay = (): string => {
     if (startAndEndDateSameDay()) {
-      return `${startTime.format(`${longDateFormat} ${timeFormat}`)} - ${endTime.format(timeFormat)}`;
+      return `${startTime.toFormat(`${longDateFormat} ${timeFormat}`)} - ${endTime.toFormat(timeFormat)}`;
     }
-    return `${startTime.format(`${shortDateFormat} ${timeFormat}`)} - ${endTime.format(
+    return `${startTime.toFormat(`${shortDateFormat} ${timeFormat}`)} - ${endTime.toFormat(
       `${shortDateFormat} ${timeFormat}`,
     )}`;
   };

@@ -3,7 +3,6 @@ import { RouteComponentProps } from '@reach/router';
 import { useSnackbar } from 'notistack';
 import Appointment from 'common/gql-types/appointment';
 import PractitionerEvent from 'common/gql-types/practitioner-event';
-import moment from 'moment';
 import FullCalendar, { EventApi, EventClickArg, EventInput } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -24,6 +23,7 @@ import { PractitionerEventOverviewPopover } from './components/practitioner-even
 import { useWindowSize } from '../../common/hooks/use-windows-size';
 import { Point } from './components/shared/point';
 import { DeleteEventModal } from './delete-event-modal/delete-event-modal';
+import { DateTime } from 'luxon';
 
 const GET_APPOINTMENTS_SUBSCRIPTION = gql`
   subscription appointmentsSub($practitionerId: bigint, $startTime: timestamptz!, $endTime: timestamptz!) {
@@ -81,7 +81,15 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
   const [endDate, setEndDate] = useState<Date>(null!);
   const { userStore } = useRootStore();
   const { practitionerInfo, isActive: isUserActive } = userStore;
-  const businessHours = useMemo(() => practitionerInfo?.schedules, [practitionerInfo?.schedules]);
+  const businessHours = useMemo(
+    () =>
+      practitionerInfo?.schedules.map((s) => ({
+        ...s,
+        startTime: DateTime.fromISO(s.startTime).toLocal().toISOTime(),
+        endTime: DateTime.fromISO(s.endTime).toLocal().toISOTime(),
+      })),
+    [practitionerInfo?.schedules],
+  );
   const [selectedEvent, selectEvent] = useState<EventDetails | null>();
 
   const { data: appointmentData, error: appSubError } = useSubscription(GET_APPOINTMENTS_SUBSCRIPTION, {
@@ -117,8 +125,8 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
       ...(appointmentData?.appointment?.map((appointment: Appointment) => ({
         id: `appointment-${appointment.id}`,
         title: `${appointment.user.first_name} ${appointment.user.last_name}`,
-        start: appointment.start_time,
-        end: appointment.end_time,
+        start: DateTime.fromISO(appointment.start_time).toLocal().toISO(),
+        end: DateTime.fromISO(appointment.end_time).toLocal().toISO(),
         extendedProps: {
           type: 'appointment',
           appointment,
@@ -127,8 +135,8 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
       ...(practitionerEventsData?.get_practitioner_events?.map((event: PractitionerEvent) => ({
         id: `event-${event.id}`,
         title: event.title,
-        start: moment(event.start_time).toISOString(true),
-        end: moment(event.end_time).toISOString(true),
+        start: DateTime.fromISO(event.start_time).toLocal().toISO(),
+        end: DateTime.fromISO(event.end_time).toLocal().toISO(),
         backgroundColor: event.hex_color,
         borderColor: event.hex_color,
         textColor: calculateTextColor(event.hex_color),
@@ -252,7 +260,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                   return '';
                 }}
                 dayHeaderContent={(args) => {
-                  const date = moment(args.date);
+                  const date = DateTime.fromJSDate(args.date);
                   if (args.view.type !== 'timeGridWeek') return undefined;
                   return (
                     <div className="calendar-day-container">
@@ -263,9 +271,9 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                           backgroundColor: args.isToday ? '#2D6455' : 'transparent',
                         }}
                       >
-                        {date.format('DD')}
+                        {date.toFormat('dd')}
                       </div>
-                      {date.format('ddd')}
+                      {date.toFormat('ccc')}
                     </div>
                   );
                 }}
@@ -314,7 +322,7 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
                   minute: '2-digit',
                   meridiem: 'short',
                 }}
-                businessHours={businessHours?.filter((x) => x.daysOfWeek)}
+                businessHours={businessHours}
                 eventClick={(args) => {
                   handleEventClick(args);
                 }}
@@ -362,7 +370,11 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
         }}
         isAllDay={isSelectedTimeSlotAllDay}
         startTime={eventStartTime}
-        endTime={isSelectedTimeSlotAllDay ? moment(eventEndTime).subtract(1, 'day').toDate() : eventEndTime}
+        endTime={
+          isSelectedTimeSlotAllDay && eventEndTime
+            ? DateTime.fromJSDate(eventEndTime).minus({ day: 1 }).toJSDate()
+            : eventEndTime
+        }
       />
       {selectedAppointment && (
         <CancelAppointmentModal
@@ -436,8 +448,8 @@ export const CalendarPage = observer((props: RouteComponentProps) => {
           open={isDeleteEventOpen}
           onClose={() => setDeleteEventOpen(false)}
           eventTitle={selectedPractitionerEvent.title}
-          startDate={selectedPractitionerEvent.start_time}
-          endDate={selectedPractitionerEvent.end_time}
+          startDate={DateTime.fromISO(selectedPractitionerEvent.start_time).toJSDate()}
+          endDate={DateTime.fromISO(selectedPractitionerEvent.end_time).toJSDate()}
           onSubmit={async () => {
             setDeleteEventOpen(false);
             if (

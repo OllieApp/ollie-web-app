@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ApolloProvider } from '@apollo/client';
 import Box from '@material-ui/core/Box';
-import MomentUtils from '@date-io/moment';
+import LuxonUtils from '@date-io/luxon';
 import { Router, Redirect, LocationProvider, useLocation, useNavigate } from '@reach/router';
 import { LogOut, X } from 'react-feather';
 import { ThemeProvider, Button, IconButton } from '@material-ui/core';
@@ -112,7 +112,7 @@ const Providers = ({ children }: React.PropsWithChildren<{}>) => {
             horizontal: 'center',
           }}
         >
-          <MuiPickersUtilsProvider utils={MomentUtils}>{children}</MuiPickersUtilsProvider>
+          <MuiPickersUtilsProvider utils={LuxonUtils}>{children}</MuiPickersUtilsProvider>
         </SnackbarProvider>
       </ThemeProvider>
     </LocationProvider>
