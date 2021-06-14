@@ -7,48 +7,6 @@ export interface AuthUser {
   password?: string;
 }
 
-export interface User {
-  id: string;
-  uid: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string | null;
-  avatarUrl?: string | null;
-  countryCode: string;
-  zipCode?: string | null;
-  city?: string | null;
-  address?: string | null;
-  medicalAidNumber?: string | null;
-  medicalAidPlan?: string | null;
-  medicalAid?: MedicalAid | null;
-  isEmailVerified: boolean;
-  isPhoneVerified: boolean;
-  isActive: boolean;
-}
-
-export interface Practitioner {
-  id: string;
-  title: string;
-  email?: string;
-  phone?: string | null;
-  bio?: string | null;
-  description?: string | null;
-  address?: string | null;
-  appointmentTimeSlot: number;
-  consultationPricingRange: number;
-  medicalAids: MedicalAid[];
-  category: DoctorCategory;
-  location?: Location | null;
-  isActive: boolean;
-  isVerified: boolean;
-  rating: number;
-  schedules: PractitionerSchedule[];
-  gender: Gender;
-  languages: Language[];
-  avatarUrl?: string | null;
-}
-
 export interface Location {
   latitude: number;
   longitude: number;
@@ -63,12 +21,6 @@ export enum DoctorCategory {
   WellnessCenter,
   Biokineticist,
   Dentist,
-}
-
-export enum DoctorAvailability {
-  Weekdays,
-  WeekdaysAndSat,
-  AllDays,
 }
 
 export enum Gender {
@@ -92,20 +44,31 @@ export enum Language {
   isiNdebele = 11,
 }
 
+export enum WeekDay {
+  Monday = 1,
+  Tuesday = 2,
+  Wednesday = 3,
+  Thursday = 4,
+  Friday = 5,
+  Saturday = 6,
+  Sunday = 7,
+}
+
+export interface Address {
+  line1?: string;
+  line2: string;
+  suburb?: string;
+  city?: string;
+  postalCode?: string;
+  stateProvinceCounty?: string;
+  countryCode?: string;
+  location?: Location | null;
+}
+
 export interface PractitionerSchedule {
   daysOfWeek: WeekDay[];
   startTime: string;
   endTime: string;
-}
-
-export enum WeekDay {
-  Sunday = 1,
-  Monday = 2,
-  Tuesday = 3,
-  Wednesday = 4,
-  Thursday = 5,
-  Friday = 6,
-  Saturday = 7,
 }
 
 export enum MedicalAid {
@@ -119,4 +82,46 @@ export enum MedicalAid {
   Profmed = 8,
   Bestmed = 9,
   Platinum = 10,
+}
+
+export interface Practitioner {
+  id: string;
+  title: string;
+  email?: string;
+  phone?: string | null;
+  bio?: string | null;
+  description?: string | null;
+  address?: Address;
+  appointmentTimeSlot: number;
+  consultationPricingRange: number;
+  medicalAids: MedicalAid[];
+  category: DoctorCategory;
+  location?: Location | null;
+  isActive: boolean;
+  isVerified: boolean;
+  rating: number;
+  schedules: PractitionerSchedule[];
+  gender: Gender;
+  languages: Language[];
+  avatarUrl?: string | null;
+}
+
+export interface User {
+  id: string;
+  uid: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  avatarUrl?: string | null;
+  countryCode: string;
+  zipCode?: string | null;
+  city?: string | null;
+  address?: string | null;
+  medicalAidNumber?: string | null;
+  medicalAidPlan?: string | null;
+  medicalAid?: MedicalAid | null;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  isActive: boolean;
 }
