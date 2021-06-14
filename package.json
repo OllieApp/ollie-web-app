@@ -81,7 +81,7 @@
     "react-scripts": "^3.4.3",
     "sass": "^1.26.10",
     "ts-jest": "^26.4.4",
-    "typescript": "^4.2.4"
+    "typescript": "^4.3.2"
   },
   "browserslist": {
     "production": [
@@ -103,7 +103,6 @@
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
-      "eslint --cache --fix",
       "prettier --write"
     ],
     "*.{yml,json,md}": "prettier --write"
